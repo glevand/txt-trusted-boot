@@ -40,7 +40,7 @@
 #include <processor.h>
 
 #define BSP_STACK_SIZE		0x2000
-#define AP_STACK_SIZE		0x1000
+#define AP_STACK_SIZE		0x0800
 
 #define cs_sel      1<<3
 #define ds_sel      2<<3
