@@ -2205,7 +2205,7 @@ static bool tpm20_hash(struct tpm_if *ti, u32 locality, const u8 *data,
     TPM2B_MAX_BUFFER buffer;
     u32 ret, i, j, chunk_size;
 
-    if ( ti == NULL || data == NULL || data_size == 0 )
+    if ( ti == NULL || data == NULL )
         return false;
 
     start_in.auth.t.size = 2;
@@ -2234,7 +2234,7 @@ static bool tpm20_hash(struct tpm_if *ti, u32 locality, const u8 *data,
 
     for( i=0; i<data_size; i+=chunk_size ) {
         if( (data_size-i) > MAX_DIGEST_BUFFER ) {
-            chunk_size = 1024;
+            chunk_size = MAX_DIGEST_BUFFER;
         } else {
             chunk_size = data_size - i;
         }
@@ -2242,23 +2242,22 @@ static bool tpm20_hash(struct tpm_if *ti, u32 locality, const u8 *data,
         buffer.t.size = chunk_size;
         memcpy( &(buffer.t.buffer[0]), &(data[i] ), chunk_size );
 
-        if( chunk_size == 1024 ) {
-            update_in.buf = buffer;
-            ret = _tpm20_sequence_update(locality, &update_in, &update_out);
-            if (ret != TPM_RC_SUCCESS) {
-                printk(TBOOT_WARN"TPM: SequenceUpdate return value = %08X\n", ret);
-                ti->error = ret;
-                return false;
-            }
-        } else {
-            complete_in.buf = buffer;
-            ret = _tpm20_sequence_complete(locality, &complete_in, &complete_out);
-            if (ret != TPM_RC_SUCCESS) {
-                printk(TBOOT_WARN"TPM: EventSequenceComplete return value = %08X\n", ret);
-                ti->error = ret;
-                return false;
-            }
+        update_in.buf = buffer;
+        ret = _tpm20_sequence_update(locality, &update_in, &update_out);
+        if (ret != TPM_RC_SUCCESS) {
+            printk(TBOOT_WARN"TPM: SequenceUpdate return value = %08X\n", ret);
+            ti->error = ret;
+            return false;
         }
+    }
+
+    buffer.t.size = 0;
+    complete_in.buf = buffer;
+    ret = _tpm20_sequence_complete(locality, &complete_in, &complete_out);
+    if (ret != TPM_RC_SUCCESS) {
+        printk(TBOOT_WARN"TPM: EventSequenceComplete return value = %08X\n", ret);
+        ti->error = ret;
+        return false;
     }
 
     hl->count = complete_out.results.count;

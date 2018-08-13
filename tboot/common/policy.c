@@ -455,11 +455,8 @@ static bool hash_module(hash_list_t *hl,
     {
         hash_list_t img_hl, final_hl;
         if ( !tpm_fp->hash(tpm, 2, (const unsigned char *)cmdline,
-                strlen(cmdline), hl) ) {
-            if ( !tpm_fp->hash(tpm, 2, base, size, hl) )
-                return false;
-            return true;
-        }
+                strlen(cmdline), hl) )
+            return false;
 
         uint8_t buf[128];
 
@@ -470,7 +467,7 @@ static bool hash_module(hash_list_t *hl,
                 if (hl->entries[i].alg == img_hl.entries[j].alg) {
                     copy_hash((tb_hash_t *)buf, &hl->entries[i].hash,
                             hl->entries[i].alg);
-                    copy_hash((tb_hash_t *)buf + get_hash_size(hl->entries[i].alg),
+                    copy_hash((tb_hash_t *)(buf + get_hash_size(hl->entries[i].alg)),
                             &img_hl.entries[j].hash, hl->entries[i].alg);
                     if ( !tpm_fp->hash(tpm, 2, buf,
                             2*get_hash_size(hl->entries[i].alg), &final_hl) )
