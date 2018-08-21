@@ -292,41 +292,41 @@ void print_event_2(void *evt, uint16_t alg)
          printk(TBOOT_DETA"\n");
 }
 
-uint32_t print_event_2_1_log_header(void *evt){
+uint32_t print_event_2_1_log_header(void *evt)
+{
+    tcg_pcr_event *evt_ptr = (tcg_pcr_event *)evt;
+    tcg_efi_specid_event_strcut *evt_data_ptr = (tcg_efi_specid_event_strcut *) evt_ptr->event_data;
 
-   tcg_pcr_event *evt_ptr = (tcg_pcr_event *)evt;
-   tcg_efi_specid_event_strcut *evt_data_ptr = (tcg_efi_specid_event_strcut *) evt_ptr->event_data;
+    printk(TBOOT_DETA"\t TCG Event Log Header:\n");
+    printk(TBOOT_DETA"\t\t       pcr_index: %u\n", evt_ptr->pcr_index);
+    printk(TBOOT_DETA"\t\t      event_type: %u\n", evt_ptr->event_type);
+    printk(TBOOT_DETA"\t\t          digest: %s\n", evt_ptr->digest);
+    printk(TBOOT_DETA"\t\t event_data_size: %u\n", evt_ptr->event_data_size);
 
-   printk(TBOOT_DETA"\t TCG Event Log Header:\n");
-   printk(TBOOT_DETA"\t\t       pcr_index: %u\n", evt_ptr->pcr_index);
-   printk(TBOOT_DETA"\t\t      event_type: %u\n", evt_ptr->event_type);
-   printk(TBOOT_DETA"\t\t          digest: %s\n", evt_ptr->digest);
-   printk(TBOOT_DETA"\t\t event_data_size: %u\n", evt_ptr->event_data_size);
+    // print out event log header data
 
-   // print out event log header data
+    printk(TBOOT_DETA"\t\t 	   header event data:  \n"); 
+    printk(TBOOT_DETA"\t\t\t              signature: %s\n", evt_data_ptr->signature);
+    printk(TBOOT_DETA"\t\t\t         platform_class: %u\n", evt_data_ptr->platform_class);
+    printk(TBOOT_DETA"\t\t\t     spec_version_major: %u\n", evt_data_ptr->spec_version_major);
+    printk(TBOOT_DETA"\t\t\t     spec_version_minor: %u\n", evt_data_ptr->spec_version_minor);
+    printk(TBOOT_DETA"\t\t\t            spec_errata: %u\n", evt_data_ptr->spec_errata);
+    printk(TBOOT_DETA"\t\t\t             uintn_size: %u\n", evt_data_ptr->uintn_size);
+    printk(TBOOT_DETA"\t\t\t   number_of_algorithms: %u\n", evt_data_ptr->number_of_algorithms);
 
-   printk(TBOOT_DETA"\t\t 	   header event data:  \n"); 
-   printk(TBOOT_DETA"\t\t\t              signature: %s\n", evt_data_ptr->signature);
-   printk(TBOOT_DETA"\t\t\t         platform_class: %u\n", evt_data_ptr->platform_class);
-   printk(TBOOT_DETA"\t\t\t     spec_version_major: %u\n", evt_data_ptr->spec_version_major);
-   printk(TBOOT_DETA"\t\t\t     spec_version_minor: %u\n", evt_data_ptr->spec_version_minor);
-   printk(TBOOT_DETA"\t\t\t            spec_errata: %u\n", evt_data_ptr->spec_errata);
-   printk(TBOOT_DETA"\t\t\t             uintn_size: %u\n", evt_data_ptr->uintn_size);
-   printk(TBOOT_DETA"\t\t\t   number_of_algorithms: %u\n", evt_data_ptr->number_of_algorithms);
+    for ( uint32_t i = 0; i < evt_data_ptr->number_of_algorithms; i++ ) {
+        printk(TBOOT_DETA"\t\t\t\t   algorithm_id: 0x%x \n", evt_data_ptr->digestSizes[i].algorithm_id);
+        printk(TBOOT_DETA"\t\t\t\t    digest_size: %u\n", evt_data_ptr->digestSizes[i].digest_size);
+    }
 
-   for ( uint32_t i = 0; i < evt_data_ptr->number_of_algorithms; i++){
-       printk(TBOOT_DETA"\t\t\t\t   algorithm_id: 0x%x \n", evt_data_ptr->digestSizes[i].algorithm_id);
-       printk(TBOOT_DETA"\t\t\t\t    digest_size: %u\n", evt_data_ptr->digestSizes[i].digest_size);
-   }
-   
-   printk(TBOOT_DETA"\t\t\t       vendor_info: %u bytes\n", evt_data_ptr->vendor_info_size);
-   print_hex(NULL, evt_data_ptr->vendor_info, evt_data_ptr->vendor_info_size);
+    printk(TBOOT_DETA"\t\t\t       vendor_info: %u bytes\n", evt_data_ptr->vendor_info_size);
+    print_hex(NULL, evt_data_ptr->vendor_info, evt_data_ptr->vendor_info_size);
 
-   return evt_ptr->event_data_size;
+    return evt_ptr->event_data_size;
 }
+
 uint32_t print_event_2_1(void *evt)
 {
-   
     tcg_pcr_event2 *evt_ptr = (tcg_pcr_event2 *)evt;
     uint8_t *evt_data_ptr;
     uint16_t hash_alg;
@@ -336,50 +336,50 @@ uint32_t print_event_2_1(void *evt)
     printk(TBOOT_DETA"\t\t\t     event_type: 0x%x\n", evt_ptr->event_type);
     printk(TBOOT_DETA"\t\t\t          count: %u\n", evt_ptr->digest.count);
     if (evt_ptr->digest.count != 0) {
-	evt_data_ptr = (uint8_t *)evt_ptr->digest.digests[0].digest;
+        evt_data_ptr = (uint8_t *)evt_ptr->digest.digests[0].digest;
         hash_alg = evt_ptr->digest.digests[0].hash_alg;
-	for (uint32_t i = 0; i < evt_ptr->digest.count; i++ ) { 
-    	    switch (hash_alg) {
+        for ( uint32_t i = 0; i < evt_ptr->digest.count; i++ ) { 
+            switch (hash_alg) {
                 case TB_HALG_SHA1:
-				printk(TBOOT_INFO"SHA1: \n");
-				print_hex(NULL, evt_data_ptr, SHA1_LENGTH);
-				evt_data_ptr += SHA1_LENGTH;
-				break;
-
+                    printk(TBOOT_INFO"SHA1: \n");
+                    print_hex(NULL, evt_data_ptr, SHA1_LENGTH);
+                    evt_data_ptr += SHA1_LENGTH;
+                    break;
+ 
                 case TB_HALG_SHA256:
-				printk(TBOOT_INFO"SHA256: \n");
-				print_hex(NULL, evt_data_ptr, SHA256_LENGTH);
-					evt_data_ptr += SHA256_LENGTH;
-				break;
-
+                    printk(TBOOT_INFO"SHA256: \n");
+                    print_hex(NULL, evt_data_ptr, SHA256_LENGTH);
+                    evt_data_ptr += SHA256_LENGTH;
+                    break;
+ 
                 case TB_HALG_SM3:
-				printk(TBOOT_INFO"SM3_256: \n");
-				print_hex(NULL, evt_data_ptr, SM3_LENGTH);
-				evt_data_ptr += SM3_LENGTH;
-				break;
-
+                    printk(TBOOT_INFO"SM3_256: \n");
+                    print_hex(NULL, evt_data_ptr, SM3_LENGTH);
+                    evt_data_ptr += SM3_LENGTH;
+                    break;
+ 
                 case TB_HALG_SHA384:
-				printk(TBOOT_INFO"SHA384: \n");
-				print_hex(NULL, evt_data_ptr, SHA384_LENGTH);
-				evt_data_ptr += SHA384_LENGTH;				
-				break;
-
+                    printk(TBOOT_INFO"SHA384: \n");
+                    print_hex(NULL, evt_data_ptr, SHA384_LENGTH);
+                    evt_data_ptr += SHA384_LENGTH;				
+                    break;
+ 
                 case TB_HALG_SHA512:
-				printk(TBOOT_INFO"SHA512:  \n");
-				print_hex(NULL, evt_data_ptr, SHA512_LENGTH);
-				evt_data_ptr += SHA512_LENGTH;
-				break;
+                    printk(TBOOT_INFO"SHA512:  \n");
+                    print_hex(NULL, evt_data_ptr, SHA512_LENGTH);
+                    evt_data_ptr += SHA512_LENGTH;
+                    break;
                 default:
-	                        printk(TBOOT_ERR"Unsupported algorithm: %u\n", evt_ptr->digest.digests[i].hash_alg);
-	 }
-         hash_alg = (uint16_t)*evt_data_ptr;
-	 evt_data_ptr += sizeof(uint16_t);
-      }
-      evt_data_ptr -= sizeof(uint16_t);
-      event_size = (uint32_t)*evt_data_ptr;
-      printk(TBOOT_DETA"\t\t\t     event_data: %u bytes", event_size);
-      evt_data_ptr += sizeof(uint32_t);
-      print_hex("\t\t\t     ", evt_data_ptr, event_size);
+                    printk(TBOOT_ERR"Unsupported algorithm: %u\n", evt_ptr->digest.digests[i].hash_alg);
+            }
+            hash_alg = (uint16_t)*evt_data_ptr;
+            evt_data_ptr += sizeof(uint16_t);
+        }
+        evt_data_ptr -= sizeof(uint16_t);
+        event_size = (uint32_t)*evt_data_ptr;
+        printk(TBOOT_DETA"\t\t\t     event_data: %u bytes", event_size);
+        evt_data_ptr += sizeof(uint32_t);
+        print_hex("\t\t\t     ", evt_data_ptr, event_size);
     }
     else { 
         printk(TBOOT_DETA"sth wrong in TCG event log: algoritm count = %u\n", evt_ptr->digest.count);
@@ -447,7 +447,6 @@ static void print_evt_log_ptr_elt_2(const heap_ext_data_element_t *elt)
     }
 }
 
-
 static void print_evt_log_ptr_elt_2_1(const heap_ext_data_element_t *elt)
 {
     const heap_event_log_ptr_elt2_1_t *elog_elt = (const heap_event_log_ptr_elt2_1_t *)elt->data;
@@ -461,8 +460,8 @@ static void print_evt_log_ptr_elt_2_1(const heap_ext_data_element_t *elt)
            elog_elt->first_record_offset, elog_elt->next_record_offset);
 
     if (elog_elt->first_record_offset == elog_elt->next_record_offset) {
-	printk(TBOOT_DETA"\t\t\t No Event Log found.\n");
-	return;
+        printk(TBOOT_DETA"\t\t\t No Event Log found.\n");
+        return;
     }
     void *curr, *next;
 
@@ -472,7 +471,7 @@ static void print_evt_log_ptr_elt_2_1(const heap_ext_data_element_t *elt)
 		
     curr += sizeof(tcg_pcr_event) + event_header_data_size;
     while ( curr < next ) {
-	curr += print_event_2_1(curr);
+        curr += print_event_2_1(curr);
     }
 }
 
