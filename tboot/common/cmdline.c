@@ -86,7 +86,6 @@ static const cmdline_option_t g_tboot_cmdline_options[] = {
     { "extpol",    "sha1" },         /*agile|embedded|sha1|sha256|sm3|... */
     { "ignore_prev_err", "true"},    /* true|false */
     { "force_tpm2_legacy_log", "false"}, /* true|false */
-    { "force_tpm2_legacy_log", "false"}, /* true|false */
     { NULL, NULL }
 };
 static char g_tboot_param_values[ARRAY_SIZE(g_tboot_cmdline_options)][MAX_VALUE_LEN];
