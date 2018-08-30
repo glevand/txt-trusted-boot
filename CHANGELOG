@@ -1,3 +1,26 @@
+20180830: v1.9.7
+        Fix a lot of issues in tools reported by klocwork scan.
+        Fix a lot of issues in tboot module reported by klocwork scan.
+        Remove a redundant tboot option
+        Fix indent in heap.c
+        Fix 4 issues along with extpol=agile option
+        Mitigations for tpm interposer attacks
+        Add an option in tboot to force SINIT to use the legacy TPM2 log format.
+        Add support for appending to a TPM2 TCG style event log.
+        Ensure tboot log is available even when measured launch is skipped.
+        Add centos7 instructions for Use in EFI boot mode.
+        Fix memory leak and invalid reads and writes issues.
+        Fix TPM 1.2 locality selection issue.
+        Fix a null pointer dereference bug when Intel TXT is disabled.
+        Optimize tboot docs installation.
+        Fix security vulnerabilities rooted in tpm_if structure and g_tpm variable.
+        The size field of the MB2 tag is the size of the tag header + the size
+        Fix openssl-1.0.2 double frees
+        Make policy element stm_elt use unique type name
+        lcptools-v2 utilities fixes
+        port to openssl-1.1.0
+        Reset debug PCR16 to zero.
+        Fix a logical error in function bool evtlog_append(...).
 20170711: v1.9.6
         GCC7 fix, adds generic FALLTHROUGH notations to avoid warnings appearing on GCC7
         Ensure Tboot never overwrites modules in the process of moving them.
