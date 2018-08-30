@@ -178,8 +178,8 @@ static unsigned long build_directmap_pagetable(void)
 
     for ( i = 0; i < sizeof(pd_table)/TB_L1_PAGETABLE_ENTRIES; i++ ) {
         ppdptre = &pdptr_table[i];
-        *ppdptre = MAKE_TB_PDPTE((unsigned long)(
-                      pd_table + i * TB_L1_PAGETABLE_ENTRIES));
+        *ppdptre = MAKE_TB_PDPTE((unsigned long)
+                      pd_table + i * TB_L1_PAGETABLE_ENTRIES);
     }
 
     /* map serial log address ~ kernel command address */

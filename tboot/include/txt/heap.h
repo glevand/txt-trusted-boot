@@ -428,6 +428,7 @@ extern uint64_t calc_os_sinit_data_size(uint32_t version);
 extern bool verify_txt_heap(const txt_heap_t *txt_heap, bool bios_data_only);
 extern bool verify_bios_data(const txt_heap_t *txt_heap);
 extern void print_os_sinit_data(const os_sinit_data_t *os_sinit_data);
+extern void print_os_sinit_data_vtdpmr(const os_sinit_data_t *os_sinit_data);
 
 #endif      /* __TXT_HEAP_H__ */
 

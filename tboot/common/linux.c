@@ -325,6 +325,10 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
 
     /* copy cmdline */
     const char *kernel_cmdline = get_cmdline(g_ldr_ctx);
+    if ( kernel_cmdline == NULL ) {
+        printk(TBOOT_ERR"Error: kernel cmdline not available\n");
+        return false;
+    }
     const size_t kernel_cmdline_size = REAL_END_OFFSET - KERNEL_CMDLINE_OFFSET;
     size_t kernel_cmdline_strlen = strlen(kernel_cmdline);
     if (kernel_cmdline_strlen > kernel_cmdline_size - 1)
@@ -405,6 +409,10 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
         int i;
 
         memory_map_t *p = get_loader_memmap(g_ldr_ctx);
+        if ( p == NULL ) {
+            printk(TBOOT_ERR"Error: no memory map available\n");
+            return false;
+        }
         uint32_t memmap_start = (uint32_t) p;
         uint32_t memmap_length = get_loader_memmap_length(g_ldr_ctx);
         for ( i = 0; (uint32_t)p < memmap_start + memmap_length; i++ )

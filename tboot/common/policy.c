@@ -620,6 +620,10 @@ static tb_error_t verify_module(module_t *module, tb_policy_entry_t *pol_entry,
     void *base = (void *)module->mod_start;
     size_t size = module->mod_end - module->mod_start;
     char *cmdline = get_module_cmd(g_ldr_ctx, module);
+    if (cmdline == NULL) {
+        printk(TBOOT_ERR"Error: failed to get module cmdline\n");
+        return TB_ERR_MODULE_VERIFICATION_FAILED;
+    }
     const struct tpm_if *tpm = get_tpm();
 
     if ( pol_entry != NULL ) {

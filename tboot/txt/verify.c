@@ -318,8 +318,8 @@ static bool verify_vtd_pmrs(txt_heap_t *txt_heap)
          (tmp_os_sinit_data.vtd_pmr_hi_size !=
           os_sinit_data->vtd_pmr_hi_size) ) {
         printk(TBOOT_ERR"OS to SINIT data VT-d PMR settings do not match:\n");
-        print_os_sinit_data(&tmp_os_sinit_data);
-        print_os_sinit_data(os_sinit_data);
+        print_os_sinit_data_vtdpmr(&tmp_os_sinit_data);
+        print_os_sinit_data_vtdpmr(os_sinit_data);
         return false;
     }
 

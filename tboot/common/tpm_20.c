@@ -2421,6 +2421,7 @@ static bool tpm20_seal(struct tpm_if *ti, uint32_t locality,
 
     create_in.outside_info.t.size = 0;
     create_in.creation_pcr.count = 0;
+    memset(&create_out, 0, sizeof(create_out));
 
     ret = _tpm20_create(locality, &create_in, &create_out);
     if ( ret != TPM_RC_SUCCESS ) {
@@ -2689,7 +2690,7 @@ static bool tpm20_init(struct tpm_if *ti)
     unsigned int i;
     tpm_info_list_t *info_list = get_tpm_info_list(g_sinit);
 
-    if ( ti == NULL )
+    if ( ti == NULL || info_list == NULL )
         return false;
    
     if (!txt_is_launched())

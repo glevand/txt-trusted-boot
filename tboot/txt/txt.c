@@ -896,6 +896,8 @@ tb_error_t txt_launch_racm(loader_ctx *lctx)
      * find correct revocation AC module in modules list
      */
     find_platform_racm(lctx, (void **)&racm, NULL);
+    if ( racm == NULL )
+        return TB_ERR_SINIT_NOT_PRESENT;
     /* copy it to a 32KB aligned memory address */
     racm = copy_racm(racm);
     if ( racm == NULL )

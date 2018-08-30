@@ -446,8 +446,8 @@ static bool is_acmod(const void *acmod_base, uint32_t acmod_size, uint8_t *type,
     if ( acmod_size < sizeof(acm_hdr_t) ) {
         if ( !quiet )
             printk(TBOOT_ERR"\t ACM size is too small: acmod_size=%x,"
-                   " sizeof(acm_hdr)=%x\n", acmod_size,
-                   (uint32_t)sizeof(acm_hdr) );
+                   " sizeof(acm_hdr_t)=%x\n", acmod_size,
+                   (uint32_t)sizeof(acm_hdr_t) );
         return false;
     }
 

@@ -416,6 +416,14 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
         if ( mod_start == NULL ) {
             char *cmdline = get_cmdline(lctx);
             char *mod_string = get_module_cmd(lctx, m);
+            if ( cmdline == NULL ) {
+                printk(TBOOT_ERR"could not find cmdline\n");
+                return NULL;
+            }
+            if ( mod_string == NULL ) {
+                printk(TBOOT_ERR"could not find module cmdline\n");
+                return NULL;
+            }
             if ((strlen(mod_string)) > (strlen(cmdline))){
                 if (strlen(mod_string) >= TBOOT_KERNEL_CMDLINE_SIZE){
                     printk(TBOOT_ERR"No room to copy MB2 cmdline [%d < %d]\n",
@@ -1867,6 +1875,10 @@ replace_e820_map(loader_ctx *lctx)
              */
             new = get_e820_copy();
             old = get_loader_memmap(lctx);
+            if ( old == NULL ) {
+                printk(TBOOT_ERR"old memory map not found\n");
+                return;
+            }
             for (i = 0; i < (get_nr_map()); i++){
                 *old = *new;
                 old++, new++;

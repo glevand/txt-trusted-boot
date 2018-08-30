@@ -738,6 +738,14 @@ uint64_t calc_os_sinit_data_size(uint32_t version)
         return size[version - MIN_OS_SINIT_DATA_VER];
 }
 
+void print_os_sinit_data_vtdpmr(const os_sinit_data_t *os_sinit_data)
+{
+    printk(TBOOT_DETA"\t vtd_pmr_lo_base: 0x%Lx\n", os_sinit_data->vtd_pmr_lo_base);
+    printk(TBOOT_DETA"\t vtd_pmr_lo_size: 0x%Lx\n", os_sinit_data->vtd_pmr_lo_size);
+    printk(TBOOT_DETA"\t vtd_pmr_hi_base: 0x%Lx\n", os_sinit_data->vtd_pmr_hi_base);
+    printk(TBOOT_DETA"\t vtd_pmr_hi_size: 0x%Lx\n", os_sinit_data->vtd_pmr_hi_size);
+}
+
 void print_os_sinit_data(const os_sinit_data_t *os_sinit_data)
 {
     printk(TBOOT_DETA"os_sinit_data (@%p, %Lx):\n", os_sinit_data,
@@ -748,10 +756,7 @@ void print_os_sinit_data(const os_sinit_data_t *os_sinit_data)
     printk(TBOOT_DETA"\t mle_size: 0x%Lx (%Lu)\n", os_sinit_data->mle_size,
            os_sinit_data->mle_size);
     printk(TBOOT_DETA"\t mle_hdr_base: 0x%Lx\n", os_sinit_data->mle_hdr_base);
-    printk(TBOOT_DETA"\t vtd_pmr_lo_base: 0x%Lx\n", os_sinit_data->vtd_pmr_lo_base);
-    printk(TBOOT_DETA"\t vtd_pmr_lo_size: 0x%Lx\n", os_sinit_data->vtd_pmr_lo_size);
-    printk(TBOOT_DETA"\t vtd_pmr_hi_base: 0x%Lx\n", os_sinit_data->vtd_pmr_hi_base);
-    printk(TBOOT_DETA"\t vtd_pmr_hi_size: 0x%Lx\n", os_sinit_data->vtd_pmr_hi_size);
+    print_os_sinit_data_vtdpmr(os_sinit_data);
     printk(TBOOT_DETA"\t lcp_po_base: 0x%Lx\n", os_sinit_data->lcp_po_base);
     printk(TBOOT_DETA"\t lcp_po_size: 0x%Lx (%Lu)\n", os_sinit_data->lcp_po_size, os_sinit_data->lcp_po_size);
     print_txt_caps("\t ", os_sinit_data->capabilities);

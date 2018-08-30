@@ -502,8 +502,10 @@ static void shutdown_system(uint32_t shutdown_type)
 
     if ( shutdown_type >= ARRAY_SIZE(types) )
         snprintf(type, sizeof(type), "unknown: %u", shutdown_type);
-    else
+    else {
         strncpy(type, types[shutdown_type], sizeof(type));
+        type[sizeof(type) - 1] = '\0';
+    }
     printk(TBOOT_INFO"shutdown_system() called for shutdown_type: %s\n", type);
 
     switch( shutdown_type ) {
