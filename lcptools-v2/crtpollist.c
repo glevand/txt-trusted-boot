@@ -132,7 +132,6 @@ static lcp_signature_t2 *read_rsa_pubkey_file(const char *file)
     if ( fp == NULL ) {
         ERROR("Error: failed to open .pem file %s: %s\n", file,
                 strerror(errno));
-        fclose(fp);
         return NULL;
     }
 
@@ -253,6 +252,7 @@ static bool rsa_sign_list_data(lcp_policy_list_t2 *pollist, const char *privkey_
         }   
 
         RSA *privkey = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
+        fclose(fp);
         if ( privkey == NULL ) {
             ERR_load_crypto_strings();
             ERROR("Error: failed to read .pem file %s: %s\n", privkey_file,
@@ -469,8 +469,10 @@ static int sign(void)
 
     uint16_t  version ;
     memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
-    if ( version != LCP_TPM20_POLICY_LIST_VERSION )
+    if ( version != LCP_TPM20_POLICY_LIST_VERSION ) {
+        free(pollist);
         return 1;
+    }
 
     pollist->tpm20_policy_list.sig_alg = sigalg_type;
     LOG("sign: version==0x0200,sig_alg=0x%x\n",pollist->tpm20_policy_list.sig_alg);
@@ -501,8 +503,14 @@ static int sign(void)
         }
 
         if ( no_sigblock ) {
-            memset(get_tpm20_sig_block(&(pollist->tpm20_policy_list)),
-                           0, sig->rsa_signature.pubkey_size);
+            unsigned char *sigblock = get_tpm20_sig_block(&(pollist->tpm20_policy_list));
+            if ( sigblock == NULL ) {
+                ERROR("Error: failed to get signature block\n");
+                free(sig);
+                free(pollist);
+                return 1;
+            }
+            memset(sigblock, 0, sig->rsa_signature.pubkey_size);
         }
         else {
             if ( !rsa_sign_list_data(&(pollist->tpm20_policy_list), privkey_file) ) {
@@ -527,15 +535,22 @@ static int sign(void)
 
         if ( !EC_KEY_generate_key(eckey) ) {
             ERROR("Error: EC_KEY_generate_key error\n");
+            free(pollist);
             return 1;
         }
         const EC_POINT *pubkey = EC_KEY_get0_public_key(eckey);
         if( pubkey == NULL) {
             ERROR("Error: EC_KEY_get0_public_key error\n");
+            free(pollist);
             return 1;
         }
 
         lcp_signature_t2 *sig = read_ecdsa_pubkey(pubkey, ecgroup);
+        if ( sig == NULL ) {
+            ERROR("Error: read_ecdsa_pubkey error\n");
+            free(pollist);
+            return 1;
+        }
         sig->ecc_signature.revocation_counter = rev_ctr;
         pollist = (lcp_list_t *)add_tpm20_signature(&(pollist->tpm20_policy_list),
                                         sig, TPM_ALG_ECDSA);
@@ -545,8 +560,14 @@ static int sign(void)
         }
 
         if ( no_sigblock ) {
-            memset(get_tpm20_sig_block(&(pollist->tpm20_policy_list)),
-                           0, sig->ecc_signature.pubkey_size);
+            unsigned char *sigblock = get_tpm20_sig_block(&(pollist->tpm20_policy_list));
+            if ( sigblock == NULL ) {
+                ERROR("Error: failed to get signature block\n");
+                free(sig);
+                free(pollist);
+                return 1;
+            }
+            memset(sigblock, 0, sig->ecc_signature.pubkey_size);
         }
         else {
             if ( !ecdsa_sign_tpm20_list_data(&(pollist->tpm20_policy_list), eckey) ) {
@@ -565,9 +586,11 @@ static int sign(void)
     }
     else if ( pollist->tpm20_policy_list.sig_alg == TPM_ALG_SM2 ) {
         LOG("sign: sig_alg == TPM_ALG_SM2\n");
+        free(pollist);
         return 1;
     }
 
+    free(pollist);
     return 1;
 }
 
@@ -659,8 +682,10 @@ static int show(void)
 
     uint16_t  version ;
     memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
-    if (version != LCP_TPM20_POLICY_LIST_VERSION )
+    if (version != LCP_TPM20_POLICY_LIST_VERSION ) {
+        free(pollist);
         return 1;
+    }
 
     LOG("show: version == 0x0200\n");
     DISPLAY("policy list file: %s\n", files[0]);
@@ -674,6 +699,7 @@ static int show(void)
             DISPLAY("failed to verify signature\n");
     }
 
+    free(pollist);
     return 0;
 }
 

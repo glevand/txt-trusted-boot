@@ -168,6 +168,11 @@ static int create(void)
 
         calc_policy_data_hash(poldata, &pol->policy_hash, pol->hash_alg);
     }
+    else {
+        ERROR("Error: unknown policy type\n");
+        free(pol);
+        return 1;
+    }
 
     bool ok;
     ok = write_file(policy_file, pol, get_policy_size(pol));

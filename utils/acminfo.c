@@ -130,6 +130,7 @@ static void *load_acm(const char *file_name, size_t *size)
     if ( size != NULL )
         *size = sb.st_size;
 
+    close(fd);
     return addr;
 }
 

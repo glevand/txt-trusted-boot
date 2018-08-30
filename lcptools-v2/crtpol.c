@@ -211,6 +211,11 @@ static int create(void)
         }
         calc_policy_data_hash(poldata, &pol->policy_hash, pol->hash_alg);
     }
+    else {
+        ERROR("Error: unknown policy type\n");
+        free(pol);
+        return 1;
+    }
     
     LOG("pol alg=0x%x, mask=0x%x, aux_mask=0x%x, sign_mask=0x%x\n", pol->hash_alg, pol->lcp_hash_alg_mask, pol->aux_hash_alg_mask, pol->lcp_sign_alg_mask);
 

@@ -131,6 +131,7 @@ static lcp_signature_t *read_pubkey_file(const char *file)
     }
 
     RSA *pubkey = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
+    fclose(fp);
     if ( pubkey == NULL ) {
         ERR_load_crypto_strings();
         ERROR("Error: failed to read .pem file %s: %s\n", file,
@@ -199,6 +200,7 @@ static bool sign_list_data(lcp_policy_list_t *pollist, const char *privkey_file)
     }
 
     RSA *privkey = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
+    fclose(fp);
     if ( privkey == NULL ) {
         ERR_load_crypto_strings();
         ERROR("Error: failed to read .pem file %s: %s\n", privkey_file,
@@ -278,11 +280,15 @@ static int create(void)
         }
         if ( !verify_policy_element(elt, len) ) {
             free(pollist);
+            free(elt);
             return 1;
         }
         pollist = add_policy_element(pollist, elt);
-        if ( pollist == NULL )
+        if ( pollist == NULL ) {
+            free(elt);
             return 1;
+        }
+        free(elt);
     }
 
     bool write_ok = write_policy_list_file(pollist_file, pollist);
@@ -324,8 +330,16 @@ static int sign(void)
     }
     pollist->sig_alg = LCP_POLSALG_RSA_PKCS_15;
 
-    if ( no_sigblock )
-        memset(get_sig_block(pollist), 0, sig->pubkey_size);
+    if ( no_sigblock ) {
+        unsigned char *sigblock = get_sig_block(pollist);
+        if ( sigblock == NULL ) {
+            ERROR("Error: failed to get signature block\n");
+            free(sig);
+            free(pollist);
+            return 1;
+        }
+        memset(sigblock, 0, sig->pubkey_size);
+    }
     else {
         if ( !sign_list_data(pollist, privkey_file) ) {
             free(sig);

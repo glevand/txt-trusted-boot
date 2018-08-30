@@ -187,7 +187,7 @@ static void display_config_regs(void *txt_config_base)
     dpr._raw = read_txt_config_reg(txt_config_base, TXTCR_DPR);
     printf("\tDPR: 0x%016jx\n", dpr._raw);
     printf("\t    lock: %s\n", bit_to_str(dpr.lock));
-    printf("\t    top: 0x%08x\n", dpr.top << 20);
+    printf("\t    top: 0x%08x\n", (uint32_t)dpr.top << 20);
     printf("\t    size: %uMB (%uB)\n", dpr.size, dpr.size*1024*1024);
 
     /* PUBLIC.KEY */

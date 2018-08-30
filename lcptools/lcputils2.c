@@ -242,7 +242,7 @@ const char *hash_alg_to_str(uint8_t alg)
     static const char *alg_str[] = { "LCP_POLHALG_SHA1" };
     static char buf[32];
 
-    if ( alg > ARRAY_SIZE(alg_str) ) {
+    if ( alg >= ARRAY_SIZE(alg_str) ) {
         snprintf(buf, sizeof(buf), "unknown (%u)", alg);
         return buf;
     }
