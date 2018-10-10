@@ -1430,7 +1430,7 @@ static uint32_t _tpm20_nv_read(uint32_t locality,
     cmd_size = (u8 *)other - cmd_buf;
     reverse_copy(cmd_buf + CMD_SIZE_OFFSET, &cmd_size, sizeof(cmd_size));
 
-    rsp_size = sizeof(*out);
+    rsp_size = sizeof(rsp_buf);
  
     if (g_tpm_family == TPM_IF_20_FIFO) {
         if (!tpm_submit_cmd(locality, cmd_buf, cmd_size, rsp_buf, &rsp_size))
@@ -1799,8 +1799,8 @@ static uint32_t _tpm20_create(uint32_t locality,
     cmd_size = (u8 *)other - cmd_buf;
     reverse_copy(cmd_buf + CMD_SIZE_OFFSET, &cmd_size, sizeof(cmd_size));
 
-    rsp_size = sizeof(*out);
-    
+    rsp_size = sizeof(rsp_buf);
+
     if (g_tpm_family == TPM_IF_20_FIFO) {
         if (!tpm_submit_cmd(locality, cmd_buf, cmd_size, rsp_buf, &rsp_size))
             return TPM_RC_FAILURE;
@@ -2412,9 +2412,19 @@ static bool tpm20_seal(struct tpm_if *ti, uint32_t locality,
     create_in.public.t.public_area.param.keyed_hash.scheme.scheme = TPM_ALG_NULL;
     create_in.public.t.public_area.unique.keyed_hash.t.size = 0;
 
+    COMPILE_TIME_ASSERT( sizeof(auth_str) - 1 <=
+            sizeof(create_in.sensitive.t.sensitive.user_auth.t.buffer) );
     create_in.sensitive.t.sensitive.user_auth.t.size = sizeof(auth_str) - 1;
     memcpy(&(create_in.sensitive.t.sensitive.user_auth.t.buffer[0]),
             auth_str, sizeof(auth_str)-1);
+    if ( in_data_size >
+            sizeof(create_in.sensitive.t.sensitive.data.t.buffer) ) {
+        printk(TBOOT_WARN"TPM: input data size to seal is too large:"
+               " %08X(%08x)\n",
+               in_data_size,
+               sizeof(create_in.sensitive.t.sensitive.data.t.buffer));
+        return false;
+    }
     create_in.sensitive.t.sensitive.data.t.size = in_data_size;
     memcpy(&(create_in.sensitive.t.sensitive.data.t.buffer[0]),
             in_data, in_data_size); 

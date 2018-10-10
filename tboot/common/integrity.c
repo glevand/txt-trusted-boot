@@ -141,7 +141,7 @@ static bool seal_data(const void *data, size_t data_size, const void *secrets, s
 {
     /* TPM_Seal can only seal small data (like key or hash), so hash data */
     struct __packed {
-        tb_hash_t data_hash;
+        sha256_hash_t data_hash;
         uint8_t   secrets[secrets_size];
     } blob;
     uint32_t err;
@@ -149,7 +149,7 @@ static bool seal_data(const void *data, size_t data_size, const void *secrets, s
     const struct tpm_if_fp *tpm_fp = get_tpm_fp();
 
     memset(&blob, 0, sizeof(blob));
-    if ( !hash_buffer(data, data_size, &blob.data_hash, tpm->cur_alg) ) {
+    if ( !hash_buffer(data, data_size, (tb_hash_t *)&blob.data_hash, TB_HALG_SHA256) ) {
         printk(TBOOT_ERR"failed to hash data\n");
         return false;
     }
@@ -169,7 +169,7 @@ static bool verify_sealed_data(const uint8_t *sealed_data,  uint32_t sealed_data
 {
     /* sealed data is hash of state data and optional secret */
     struct __packed {
-        tb_hash_t data_hash;
+        sha256_hash_t data_hash;
         uint8_t   secrets[secrets_size];
     } blob;
     bool err = true;
@@ -186,14 +186,14 @@ static bool verify_sealed_data(const uint8_t *sealed_data,  uint32_t sealed_data
         goto done;
     }
 
-    /* verify that (hash of) current data maches sealed hash */
+    /* verify that (hash of) current data matches sealed hash */
     tb_hash_t curr_data_hash;
     memset(&curr_data_hash, 0, sizeof(curr_data_hash));
-    if ( !hash_buffer(curr_data, curr_data_size, &curr_data_hash, tpm->cur_alg) ) {
+    if ( !hash_buffer(curr_data, curr_data_size, &curr_data_hash, TB_HALG_SHA256) ) {
         printk(TBOOT_WARN"failed to hash state data\n");
         goto done;
     }
-    if ( !are_hashes_equal(&blob.data_hash, &curr_data_hash, tpm->cur_alg) ) {
+    if ( !are_hashes_equal((tb_hash_t *)&blob.data_hash, &curr_data_hash, TB_HALG_SHA256) ) {
         printk(TBOOT_WARN"sealed hash does not match current hash\n");
         goto done;
     }
