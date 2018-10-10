@@ -86,6 +86,7 @@ static const cmdline_option_t g_tboot_cmdline_options[] = {
     { "extpol",    "sha1" },         /*agile|embedded|sha1|sha256|sm3|... */
     { "ignore_prev_err", "true"},    /* true|false */
     { "force_tpm2_legacy_log", "false"}, /* true|false */
+    { "save_vtd", "false"},          /* true|false */
     { NULL, NULL }
 };
 static char g_tboot_param_values[ARRAY_SIZE(g_tboot_cmdline_options)][MAX_VALUE_LEN];
@@ -549,6 +550,17 @@ bool get_tboot_ignore_prev_err(void)
 			   "ignore_prev_err");
     if ( ignore_prev_err == NULL || strcmp(ignore_prev_err, "true") == 0 )
 	    return true;
+    return false;
+}
+
+bool get_tboot_save_vtd(void)
+{
+    const char *save_vtd =
+       get_option_val(g_tboot_cmdline_options,
+              g_tboot_param_values,
+              "save_vtd");
+    if ( save_vtd != NULL && strcmp(save_vtd, "true") == 0 )
+       return true;
     return false;
 }
 

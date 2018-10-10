@@ -169,7 +169,8 @@ static void post_launch(void)
     txt_post_launch();
 
     /* backup DMAR table */
-    save_vtd_dmar_table();
+    if ( get_tboot_save_vtd() )
+        save_vtd_dmar_table();
 
     if ( s3_flag  )    
          s3_launch();
@@ -473,7 +474,8 @@ void s3_launch(void)
     }
 
     /* remove DMAR table if necessary */
-    remove_vtd_dmar_table();
+    if ( get_tboot_save_vtd() )
+        remove_vtd_dmar_table();
 
     if ( !is_launched() )
         apply_policy(TB_ERR_S3_INTEGRITY);
@@ -591,7 +593,8 @@ void shutdown(void)
 
     if ( _tboot_shared.shutdown_type == TB_SHUTDOWN_S3 ) {
         /* restore DMAR table if needed */
-        restore_vtd_dmar_table();
+        if ( get_tboot_save_vtd() )
+            restore_vtd_dmar_table();
 	if ( tpm->major == TPM20_VER_MAJOR ) {
 	    tpm_fp->context_flush(tpm, tpm->cur_loc, handle2048);
 	    tpm_fp->context_load(tpm, tpm->cur_loc, &tpm2_context_saved, &handle2048);

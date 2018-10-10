@@ -315,6 +315,16 @@ o  Force TPM2 legacy log format.
    setting provides a way to force use of the legacy log format for TPM 2 systems:
            force_tpm2_legacy_log=false|true  // defaults to false
 
+o  Opt-in the vtd dmar table save/restore process
+   With recent kernel (4.16.3 in fedora28), the acpi table seems changed by
+   kernel. So function restore_vtd_dmar_table() will not work as expected to
+   find the vtd dmar table and restore it in S3 resume, instead, the system will
+   run into a hang or a reset.
+
+   To solve the S3 issue but still keep vtd dmar table save/restore process for
+   specific case, add below option:
+       save_vtd=false|true  // defaults to false
+ 
 PCR Usage:
 ---------
 o  Legacy PCR mapping
