@@ -49,6 +49,7 @@
 #include <tpm.h>
 #include <tboot.h>
 #include <txt/config_regs.h>
+#include <cmdline.h>
 
 #define TB_LAUNCH_ERR_IDX     0x20000002      /* launch error index */
 
@@ -145,6 +146,9 @@ bool read_tb_error_code(tb_error_t *error)
 
     memset(error, 0, size);
 
+    if ( get_tboot_ignore_prev_err() )
+        return true;
+
     /* read! */
     if ( !tpm_fp->nv_read(tpm, 0, tpm->tb_err_index, 0,
                 (uint8_t *)error, &size) ) {
@@ -168,6 +172,9 @@ bool write_tb_error_code(tb_error_t error)
     struct tpm_if *tpm = get_tpm();
     const struct tpm_if_fp *tpm_fp = get_tpm_fp();
     
+    if ( get_tboot_ignore_prev_err() )
+        return true;
+
     if ( !tpm || !tpm_fp || no_err_idx )
         return false;
 
