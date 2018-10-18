@@ -1,3 +1,8 @@
+20181011: v1.9.8
+        Skip tboot launch error index read/write when ignore prev err option is true
+        s3-fix: fix a stack overflow caused by enlarged tb_hash_t union
+        S3 fix: revert the mis-changed type casting in changeset 522:8e881a07c059
+        S3-fix: Adding option save_vtd=true to opt-in the vtd table restore
 20180830: v1.9.7
         Fix a lot of issues in tools reported by klocwork scan.
         Fix a lot of issues in tboot module reported by klocwork scan.
