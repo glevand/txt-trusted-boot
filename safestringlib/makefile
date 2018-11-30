@@ -1,6 +1,6 @@
 IDIR = include
 CC=gcc
-CFLAGS=-I$(IDIR) -fstack-protector-strong -fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security
+CFLAGS=-I$(IDIR) -fstack-protector-strong -fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -DSTDC_HEADERS
 LDFLAGS=-z noexecstack -z relo -z now
 
 ODIR=obj
@@ -25,6 +25,7 @@ CLIB =$(addprefix $(SRCDIR)/,$(_CLIB))
  
 
 $(ODIR)/%.o: $(SRCDIR)/%.c $(DEPS) $(ODEPS)
+	mkdir -p $(ODIR)
 	$(CC) $(LDFLAGS) -c -o $@ $< $(CFLAGS)
 
 libsafestring.a: $(OBJ)
@@ -39,6 +40,7 @@ TCLIB =$(addprefix $(TESTDIR)/,$(_TESTFUNCS))
  
 
 $(OTDIR)/%.o: $(TESTDIR)/%.c $(TESTDIR)/test_private.h
+	mkdir -p $(OTDIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 
@@ -48,9 +50,16 @@ safestringtest: libsafestring.a $(TOBJ)
 
 all: libsafestring.a safestringtest
 
+build: libsafestring.a       
+
+install: build
+dist: build
+uninstall:
+distclean:clean
+
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ $(OTDIR)/*.o
+	rm -rf $(ODIR) *~ core $(INCDIR)/*~ $(OTDIR)
 	rm -f libsafestring.a
 	rm -f safestringtest
