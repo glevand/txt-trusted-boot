@@ -1,3 +1,10 @@
+20181130: v1.9.9
+        tools: fix some dereference-NULL issues reported by klocwork
+        tools: replace banned mem/str fns with corresponding ones in safestringlib
+        Add safestringlib code to support replacement of banned mem/str fns
+        lcptools: remove tools supporting platforms before 2008
+        tboot: update string/memory fn name to differentiate from c lib
+        Fix a harmless overflow caused by wrong loop limits
 20181011: v1.9.8
         Skip tboot launch error index read/write when ignore prev err option is true
         s3-fix: fix a stack overflow caused by enlarged tb_hash_t union

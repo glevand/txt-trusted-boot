@@ -6,7 +6,8 @@
 #
 # tboot-specific build settings
 #
-
+RELEASEVER  := "1.9.9"
+RELEASETIME := "2018-11-30 15:00 +0800"
 ROOTDIR ?= $(CURDIR)/..
 
 # tboot needs too many customized compiler settings to use system CFLAGS,
@@ -33,7 +34,7 @@ CFLAGS		+= $(call cc-option,$(CC),-fno-stack-protector-all,)
 CFLAGS		+= $(call cc-option,$(CC),-fno-stack-check,)
 
 # changeset variable for banner
-CFLAGS		+= -DTBOOT_CHANGESET=\""$(shell ((hg parents --template "{isodate|isodate} {rev}:{node|short}" >/dev/null && hg parents --template "{isodate|isodate} {rev}:{node|short}") || echo "2018-10-18 13:00 +0800 1.9.8") 2>/dev/null)"\"
+CFLAGS		+= -DTBOOT_CHANGESET=\""$(shell ((hg parents --template "{isodate|isodate} {rev}:{node|short}" >/dev/null && hg parents --template "{isodate|isodate} {rev}:{node|short}") || echo "$(RELEASETIME) $(RELEASEVER)") 2>/dev/null)"\"
 
 
 AFLAGS		+= -D__ASSEMBLY__
