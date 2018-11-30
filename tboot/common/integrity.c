@@ -148,19 +148,19 @@ static bool seal_data(const void *data, size_t data_size, const void *secrets, s
     struct tpm_if *tpm = get_tpm();
     const struct tpm_if_fp *tpm_fp = get_tpm_fp();
 
-    memset(&blob, 0, sizeof(blob));
+    tb_memset(&blob, 0, sizeof(blob));
     if ( !hash_buffer(data, data_size, (tb_hash_t *)&blob.data_hash, TB_HALG_SHA256) ) {
         printk(TBOOT_ERR"failed to hash data\n");
         return false;
     }
 
-    if ( secrets != NULL && secrets_size > 0 )  memcpy(blob.secrets, secrets, secrets_size);
+    if ( secrets != NULL && secrets_size > 0 )  tb_memcpy(blob.secrets, secrets, secrets_size);
 
     err = tpm_fp->seal(tpm, 2, sizeof(blob), (const uint8_t *)&blob, sealed_data_size, sealed_data);
     if ( !err )  printk(TBOOT_WARN"failed to seal data\n");
 
     /* since blob might contain secret, clear it */
-    memset(&blob, 0, sizeof(blob));
+    tb_memset(&blob, 0, sizeof(blob));
 
     return err;
 }
@@ -188,7 +188,7 @@ static bool verify_sealed_data(const uint8_t *sealed_data,  uint32_t sealed_data
 
     /* verify that (hash of) current data matches sealed hash */
     tb_hash_t curr_data_hash;
-    memset(&curr_data_hash, 0, sizeof(curr_data_hash));
+    tb_memset(&curr_data_hash, 0, sizeof(curr_data_hash));
     if ( !hash_buffer(curr_data, curr_data_size, &curr_data_hash, TB_HALG_SHA256) ) {
         printk(TBOOT_WARN"failed to hash state data\n");
         goto done;
@@ -199,13 +199,13 @@ static bool verify_sealed_data(const uint8_t *sealed_data,  uint32_t sealed_data
     }
 
     if ( secrets != NULL && secrets_size > 0 )
-        memcpy(secrets, &blob.secrets, secrets_size);
+        tb_memcpy(secrets, &blob.secrets, secrets_size);
 
     err = false;
 
  done:
     /* clear secret from local memory */
-    memset(&blob, 0, sizeof(blob));
+    tb_memset(&blob, 0, sizeof(blob));
 
     return !err;
 }
@@ -220,7 +220,7 @@ bool seal_pre_k_state(void)
     const struct tpm_if_fp *tpm_fp = get_tpm_fp();
     
     /* save hash of current policy into g_pre_k_s3_state */
-    memset(&g_pre_k_s3_state.pol_hash, 0, sizeof(g_pre_k_s3_state.pol_hash));
+    tb_memset(&g_pre_k_s3_state.pol_hash, 0, sizeof(g_pre_k_s3_state.pol_hash));
     if ( !hash_policy(&g_pre_k_s3_state.pol_hash, tpm->cur_alg) ) {
         printk(TBOOT_ERR"failed to hash policy\n");
         goto error;
@@ -364,7 +364,7 @@ static bool measure_memory_integrity(vmac_t *mac, uint8_t key[VMAC_KEY_LEN/8])
     *mac = vmac(NULL, 0, nonce, NULL, &ctx);
 
     /* wipe ctx to ensure key not left in memory */
-    memset(&ctx, 0, sizeof(ctx));
+    tb_memset(&ctx, 0, sizeof(ctx));
 
     /* return to protected mode without paging */
     if (!disable_paging())
@@ -421,7 +421,7 @@ bool verify_integrity(void)
     vmac_t mac;
     if ( !measure_memory_integrity(&mac, secrets.mac_key) )
         goto error;
-    if ( memcmp(&mac, &g_post_k_s3_state.kernel_integ, sizeof(mac)) ) {
+    if ( tb_memcmp(&mac, &g_post_k_s3_state.kernel_integ, sizeof(mac)) ) {
         printk(TBOOT_INFO"memory integrity lost on S3 resume\n");
         printk(TBOOT_DETA"MAC of current image is: ");
         print_hex(NULL, &mac, sizeof(mac));
@@ -441,11 +441,11 @@ bool verify_integrity(void)
     }
 
     /* copy sealed shared key back to _tboot_shared.s3_key */
-    memcpy(_tboot_shared.s3_key, secrets.shared_key,
+    tb_memcpy(_tboot_shared.s3_key, secrets.shared_key,
            sizeof(_tboot_shared.s3_key));
 
     /* wipe secrets from memory */
-    memset(&secrets, 0, sizeof(secrets));
+    tb_memset(&secrets, 0, sizeof(secrets));
 
     return true;
 
@@ -483,7 +483,7 @@ bool seal_post_k_state(void)
     if ( !measure_memory_integrity(&g_post_k_s3_state.kernel_integ, secrets.mac_key) ) return false;
 
     /* copy s3_key into secrets to be sealed */
-    memcpy(secrets.shared_key, _tboot_shared.s3_key, sizeof(secrets.shared_key));
+    tb_memcpy(secrets.shared_key, _tboot_shared.s3_key, sizeof(secrets.shared_key));
 
     print_post_k_s3_state();
 
@@ -491,7 +491,7 @@ bool seal_post_k_state(void)
     if ( !seal_data(&g_post_k_s3_state, sizeof(g_post_k_s3_state), &secrets, sizeof(secrets), sealed_post_k_state, &sealed_post_k_state_size) ) return false;
 
     /* wipe secrets from memory */
-    memset(&secrets, 0, sizeof(secrets));
+    tb_memset(&secrets, 0, sizeof(secrets));
 
     return true;
 }

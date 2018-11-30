@@ -282,7 +282,7 @@ static bool unwrap_lcp_policy(void)
     }
 
     /* if lcp policy data version is 2+ */
-    if ( memcmp((void *)lcp_base, LCP_POLICY_DATA_FILE_SIGNATURE,
+    if ( tb_memcmp((void *)lcp_base, LCP_POLICY_DATA_FILE_SIGNATURE,
              LCP_FILE_SIG_LENGTH) == 0 ) {
         lcp_policy_data_t *poldata = (lcp_policy_data_t *)lcp_base;
         lcp_policy_list_t *pollist = &poldata->policy_lists[0];
@@ -301,7 +301,7 @@ static bool unwrap_lcp_policy(void)
                     /* check uuid in custom element */
                     if ( are_uuids_equal(&custom->uuid,
                              &((uuid_t)LCP_CUSTOM_ELEMENT_TBOOT_UUID)) ) {
-                        memcpy(_policy_index_buf, &custom->data,
+                        tb_memcpy(_policy_index_buf, &custom->data,
                             elt->size - sizeof(*elt) - sizeof(uuid_t));
                         return true; /* find tb policy */
                     }
@@ -439,7 +439,7 @@ static bool hash_module(hash_list_t *hl,
         hl->count = 1;
         hl->entries[0].alg = tpm->cur_alg;
 
-        if ( !hash_buffer((const unsigned char *)cmdline, strlen(cmdline),
+        if ( !hash_buffer((const unsigned char *)cmdline, tb_strlen(cmdline),
                     &hl->entries[0].hash, tpm->cur_alg) )
             return false;
         /* hash image and extend into cmdline hash */
@@ -455,7 +455,7 @@ static bool hash_module(hash_list_t *hl,
     {
         hash_list_t img_hl, final_hl;
         if ( !tpm_fp->hash(tpm, 2, (const unsigned char *)cmdline,
-                strlen(cmdline), hl) )
+                tb_strlen(cmdline), hl) )
             return false;
 
         uint8_t buf[128];
@@ -496,7 +496,7 @@ static bool hash_module(hash_list_t *hl,
         hl->count = tpm->alg_count;
         for (unsigned int i=0; i<hl->count; i++) {
             hl->entries[i].alg = tpm->algs[i];
-            if ( !hash_buffer((const unsigned char *)cmdline, strlen(cmdline),
+            if ( !hash_buffer((const unsigned char *)cmdline, tb_strlen(cmdline),
                         &hl->entries[i].hash, tpm->algs[i]) )
                 return false;
 
@@ -629,12 +629,12 @@ static tb_error_t verify_module(module_t *module, tb_policy_entry_t *pol_entry,
     if ( pol_entry != NULL ) {
         /* chunk the command line into 80 byte chunks */
 #define CHUNK_SIZE 80
-        int      cmdlen = strlen(cmdline);
+        int      cmdlen = tb_strlen(cmdline);
         char    *cptr = cmdline;
         char     cmdchunk[CHUNK_SIZE+1];
         printk(TBOOT_INFO"verifying module \"");
         while (cmdlen > 0) {
-            strncpy(cmdchunk, cptr, CHUNK_SIZE);
+            tb_strncpy(cmdchunk, cptr, CHUNK_SIZE);
             cmdchunk[CHUNK_SIZE] = 0;
             printk(TBOOT_INFO"\n%s", cmdchunk);
             cmdlen -= CHUNK_SIZE;
@@ -690,8 +690,8 @@ static void verify_g_policy(void)
     /* hash will be <policy control field (4bytes)> | <hash policy> */
     /* where <hash policy> will be 0s if TB_POLCTL_EXTEND_PCR17 is clear */
     static uint8_t buf[sizeof(tb_hash_t) + sizeof(g_policy->policy_control)];
-    memset(buf, 0, sizeof(buf));
-    memcpy(buf, &g_policy->policy_control, sizeof(g_policy->policy_control));
+    tb_memset(buf, 0, sizeof(buf));
+    tb_memcpy(buf, &g_policy->policy_control, sizeof(g_policy->policy_control));
     if ( g_policy->policy_control & TB_POLCTL_EXTEND_PCR17 ) {
         if ( !hash_policy((tb_hash_t *)&buf[sizeof(g_policy->policy_control)],
                           tpm->cur_alg) ) {
@@ -839,7 +839,7 @@ static tb_error_t verify_nvindex(tb_policy_entry_t *pol_entry,
     }
 
     /* get nv content */
-    memset(nv_buf, 0, sizeof(nv_buf));
+    tb_memset(nv_buf, 0, sizeof(nv_buf));
     if ( !read_policy_from_tpm(pol_entry->nv_index,
                 nv_buf, &nv_size) ) {
         printk(TBOOT_ERR"\t :reading nv index 0x%08X failed\n",
@@ -862,7 +862,7 @@ static tb_error_t verify_nvindex(tb_policy_entry_t *pol_entry,
                    (int)nv_size, sizeof(digest.sha1));
             return TB_ERR_NV_VERIFICATION_FAILED;
         }
-        memcpy(digest.sha1, nv_buf, nv_size);
+        tb_memcpy(digest.sha1, nv_buf, nv_size);
         break;
     default:
         printk(TBOOT_ERR"\t :bad mod number for NV measuring in policy entry: %d\n",
@@ -879,7 +879,7 @@ static tb_error_t verify_nvindex(tb_policy_entry_t *pol_entry,
         VL_ENTRIES(NUM_VL_ENTRIES).pcr = pol_entry->pcr;
         VL_ENTRIES(NUM_VL_ENTRIES).hl.count = 1;
         VL_ENTRIES(NUM_VL_ENTRIES).hl.entries[0].alg = TB_HALG_SHA1;
-        memcpy(VL_ENTRIES(NUM_VL_ENTRIES++).hl.entries[0].hash.sha1,
+        tb_memcpy(VL_ENTRIES(NUM_VL_ENTRIES++).hl.entries[0].hash.sha1,
                 digest.sha1, SHA1_LENGTH);
     }
 

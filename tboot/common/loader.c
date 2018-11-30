@@ -94,11 +94,11 @@ printk_long(char *what)
 {
     /* chunk the command line into 70 byte chunks */
 #define CHUNK_SIZE 70
-    int      cmdlen = strlen(what);
+    int      cmdlen = tb_strlen(what);
     char    *cptr = what;
     char     cmdchunk[CHUNK_SIZE+1];
     while (cmdlen > 0) {
-        strncpy(cmdchunk, cptr, CHUNK_SIZE);
+        tb_strncpy(cmdchunk, cptr, CHUNK_SIZE);
         cmdchunk[CHUNK_SIZE] = 0;
         printk(TBOOT_INFO"\t%s\n", cmdchunk);
         cmdlen -= CHUNK_SIZE;
@@ -195,13 +195,13 @@ void print_mbi(const multiboot_info_t *mbi)
     if ( mbi->flags & MBI_CMDLINE ) {
 # define CHUNK_SIZE 72 
         /* Break the command line up into 72 byte chunks */
-        int   cmdlen = strlen(mbi->cmdline);
+        int   cmdlen = tb_strlen(mbi->cmdline);
         char *cmdptr = (char *)mbi->cmdline;
         char  chunk[CHUNK_SIZE+1];
         printk(TBOOT_DETA"\t cmdline@0x%x: ", mbi->cmdline);
         chunk[CHUNK_SIZE] = '\0';
         while (cmdlen > 0) {
-            strncpy(chunk, cmdptr, CHUNK_SIZE); 
+            tb_strncpy(chunk, cmdptr, CHUNK_SIZE); 
             printk(TBOOT_DETA"\n\t\"%s\"", chunk);
             cmdptr += CHUNK_SIZE;
             cmdlen -= CHUNK_SIZE;
@@ -401,7 +401,7 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
         }
 
         /* copy remaing mods down by one */
-        memmove(m, m + 1, (mbi->mods_count - i - 1)*sizeof(module_t));
+        tb_memmove(m, m + 1, (mbi->mods_count - i - 1)*sizeof(module_t));
 
         mbi->mods_count--;
 
@@ -424,10 +424,10 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
                 printk(TBOOT_ERR"could not find module cmdline\n");
                 return NULL;
             }
-            if ((strlen(mod_string)) > (strlen(cmdline))){
-                if (strlen(mod_string) >= TBOOT_KERNEL_CMDLINE_SIZE){
+            if ((tb_strlen(mod_string)) > (tb_strlen(cmdline))){
+                if (tb_strlen(mod_string) >= TBOOT_KERNEL_CMDLINE_SIZE){
                     printk(TBOOT_ERR"No room to copy MB2 cmdline [%d < %d]\n",
-                           (int)(strlen(cmdline)), (int)(strlen(mod_string)));
+                           (int)(tb_strlen(cmdline)), (int)(tb_strlen(mod_string)));
                 } else {
                     char *s = mod_string;
                     char *d = cmdbuf;
@@ -504,7 +504,7 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
                 return NULL;
             }
 
-            grow_mb2_tag(lctx, cur, strlen(cmdbuf) - strlen(cmd->string));
+            grow_mb2_tag(lctx, cur, tb_strlen(cmdbuf) - tb_strlen(cmd->string));
 
             /* now we're all good, except for fixing up cmd */
             {
@@ -536,7 +536,7 @@ static bool adjust_kernel_cmdline(loader_ctx *lctx,
         if (old_cmdline == NULL)
             old_cmdline = "";
 
-        snprintf(new_cmdline, TBOOT_KERNEL_CMDLINE_SIZE, "%s tboot=%p",
+        tb_snprintf(new_cmdline, TBOOT_KERNEL_CMDLINE_SIZE, "%s tboot=%p",
                  old_cmdline, tboot_shared_addr);
         new_cmdline[TBOOT_KERNEL_CMDLINE_SIZE - 1] = '\0';
 
@@ -563,7 +563,7 @@ static bool adjust_kernel_cmdline(loader_ctx *lctx,
                 printk(TBOOT_ERR"adjust_kernel_cmdline() NULL MB2 cmd\n");
                 return NULL;
             }
-            uint32_t new_cmdline_tag_size = 2 * sizeof(uint32_t) + strlen(new_cmdline) + 1;
+            uint32_t new_cmdline_tag_size = 2 * sizeof(uint32_t) + tb_strlen(new_cmdline) + 1;
             if ( new_cmdline_tag_size > cmd->size ){
                 if (false ==
                     grow_mb2_tag(lctx, cur,
@@ -632,7 +632,7 @@ find_module(loader_ctx *lctx, void **base, size_t *size,
             printk(TBOOT_ERR"Error: image size is smaller than data size.\n");
             return false;
         }
-        if ( memcmp((void *)m->mod_start, data, len) == 0 ) {
+        if ( tb_memcmp((void *)m->mod_start, data, len) == 0 ) {
             *base = (void *)m->mod_start;
             if ( size != NULL )
                 *size = mod_size;
@@ -736,7 +736,7 @@ unsigned long get_mbi_mem_end_mb1(const multiboot_info_t *mbi)
     unsigned long end = (unsigned long)(mbi + 1);
 
     if ( mbi->flags & MBI_CMDLINE )
-        end = max(end, mbi->cmdline + strlen((char *)mbi->cmdline) + 1);
+        end = max(end, mbi->cmdline + tb_strlen((char *)mbi->cmdline) + 1);
     if ( mbi->flags & MBI_MODULES ) {
         end = max(end, mbi->mods_addr + mbi->mods_count * sizeof(module_t));
         unsigned int i;
@@ -744,7 +744,7 @@ unsigned long get_mbi_mem_end_mb1(const multiboot_info_t *mbi)
             module_t *p = get_module_mb1(mbi, i);
             if ( p == NULL )
                 break;
-            end = max(end, p->string + strlen((char *)p->string) + 1);
+            end = max(end, p->string + tb_strlen((char *)p->string) + 1);
         }
     }
     if ( mbi->flags & MBI_AOUT ) {
@@ -765,7 +765,7 @@ unsigned long get_mbi_mem_end_mb1(const multiboot_info_t *mbi)
     /*  GET CONFIGURATION bios call", so skip it */
     if ( mbi->flags & MBI_BTLDNAME )
         end = max(end, mbi->boot_loader_name
-                       + strlen((char *)mbi->boot_loader_name) + 1);
+                       + tb_strlen((char *)mbi->boot_loader_name) + 1);
     if ( mbi->flags & MBI_APM )
         /* per Grub-multiboot-Main Part2 Rev94-Structures, apm size is 20 */
         end = max(end, mbi->apm_table + 20);
@@ -847,7 +847,7 @@ static bool move_modules_to_high_memory(loader_ctx  *lctx)
             uint32_t highest_mod_newbase = PAGE_DOWN(ld_ceiling-size);
             printk(TBOOT_INFO"moving module %u (%u B) from 0x%08X to 0x%08X\n",
                     highest_mod_i, size, highest_mod_base, highest_mod_newbase);
-            memcpy((void *)highest_mod_newbase, (void *)highest_mod_base, size);
+            tb_memcpy((void *)highest_mod_newbase, (void *)highest_mod_base, size);
             m->mod_start= highest_mod_newbase;
             m->mod_end  = highest_mod_newbase+size;
         }
@@ -929,7 +929,7 @@ static bool move_modules_above_elf_kernel(  loader_ctx      *lctx,
             uint32_t lowest_mod_newbase = ld_floor; /* already page aligned */
             printk(TBOOT_INFO"moving module %u (%u B) from 0x%08X to 0x%08X\n",
                     lowest_mod_i, size, lowest_mod_base, lowest_mod_newbase);
-            memcpy((void *)lowest_mod_newbase, (void *)lowest_mod_base, size);
+            tb_memcpy((void *)lowest_mod_newbase, (void *)lowest_mod_base, size);
             m->mod_start= lowest_mod_newbase;
             m->mod_end  = lowest_mod_newbase+size;
         }
@@ -1106,7 +1106,7 @@ move_modules(loader_ctx *lctx)
     if ( to < get_loader_ctx_end(lctx) )
         to = get_loader_ctx_end(lctx);
 
-    memcpy((void *)to, (void *)from, TBOOT_BASE_ADDR - from);
+    tb_memcpy((void *)to, (void *)from, TBOOT_BASE_ADDR - from);
     
     printk(TBOOT_DETA"0x%lx bytes copied from 0x%lx to 0x%lx\n",
            TBOOT_BASE_ADDR - from, from, to);
@@ -1529,7 +1529,7 @@ find_module_by_file_signature(loader_ctx *lctx, void **base,
                               size_t *size, const char* file_signature)
 {
     return find_module(lctx, base, size, 
-                       file_signature, strlen(file_signature));
+                       file_signature, tb_strlen(file_signature));
 }
 
 bool 

@@ -46,7 +46,17 @@ typedef struct __packed {
 
 static inline bool are_uuids_equal(const uuid_t *uuid1, const uuid_t *uuid2)
 {
-    return (memcmp(uuid1, uuid2, sizeof(*uuid1)) == 0);
+    return (uuid1->data1 == uuid2->data1
+         && uuid1->data2 == uuid2->data2
+         && uuid1->data3 == uuid2->data3
+         && uuid1->data4 == uuid2->data4
+         && uuid1->data5[0] == uuid2->data5[0]
+         && uuid1->data5[1] == uuid2->data5[1]
+         && uuid1->data5[2] == uuid2->data5[2]
+         && uuid1->data5[3] == uuid2->data5[3]
+         && uuid1->data5[4] == uuid2->data5[4]
+         && uuid1->data5[5] == uuid2->data5[5]
+         );
 }
 
 #ifndef PRINT

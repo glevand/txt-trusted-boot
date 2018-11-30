@@ -140,7 +140,7 @@ int sha256_process(sha256_state * md, const unsigned char *in, unsigned long inl
             inlen -= SHA256_BLOCK_SIZE;                      
         } else {                                              
            n = MIN(inlen, (SHA256_BLOCK_SIZE - md->curlen));
-           memcpy(md->buf + md->curlen, in, (size_t)n);
+           tb_memcpy(md->buf + md->curlen, in, (size_t)n);
            md->curlen += n;
            in += n;
            inlen -= n;

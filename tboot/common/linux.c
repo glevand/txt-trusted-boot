@@ -65,11 +65,11 @@ printk_long(const char *what)
 {
     /* chunk the command line into 70 byte chunks */
 #define CHUNK_SIZE 70
-    int      cmdlen = strlen(what);
+    int      cmdlen = tb_strlen(what);
     const char    *cptr = what;
     char     cmdchunk[CHUNK_SIZE+1];
     while (cmdlen > 0) {
-        strncpy(cmdchunk, cptr, CHUNK_SIZE);
+        tb_strncpy(cmdchunk, cptr, CHUNK_SIZE);
         cmdchunk[CHUNK_SIZE] = 0;
         printk(TBOOT_INFO"\t%s\n", cmdchunk);
         cmdlen -= CHUNK_SIZE;
@@ -218,7 +218,7 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
             }
         }
 
-        memmove((void *)initrd_base, initrd_image, initrd_size);
+        tb_memmove((void *)initrd_base, initrd_image, initrd_size);
         printk(TBOOT_DETA"Initrd from 0x%lx to 0x%lx\n",
                (unsigned long)initrd_base,
                (unsigned long)(initrd_base + initrd_size));
@@ -305,20 +305,20 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
     /* set cmd_line_ptr */
     hdr->cmd_line_ptr = real_mode_base + KERNEL_CMDLINE_OFFSET;
 
-    /* Save linux header struct to temp memory, in case the it is overwritten by memmove below*/
+    /* Save linux header struct to temp memory, in case the it is overwritten by tb_memmove below*/
     linux_kernel_header_t temp_hdr;
-    memmove(&temp_hdr, hdr, sizeof(temp_hdr));
+    tb_memmove(&temp_hdr, hdr, sizeof(temp_hdr));
     hdr = &temp_hdr;
 
     /* load protected-mode part */
-    memmove((void *)protected_mode_base, linux_image + real_mode_size,
+    tb_memmove((void *)protected_mode_base, linux_image + real_mode_size,
             protected_mode_size);
     printk(TBOOT_DETA"Kernel (protected mode) from 0x%lx to 0x%lx\n",
            (unsigned long)protected_mode_base,
            (unsigned long)(protected_mode_base + protected_mode_size));
 
     /* load real-mode part */
-    memmove((void *)real_mode_base, linux_image, real_mode_size);
+    tb_memmove((void *)real_mode_base, linux_image, real_mode_size);
     printk(TBOOT_DETA"Kernel (real mode) from 0x%lx to 0x%lx\n",
            (unsigned long)real_mode_base,
            (unsigned long)(real_mode_base + real_mode_size));
@@ -330,11 +330,11 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
         return false;
     }
     const size_t kernel_cmdline_size = REAL_END_OFFSET - KERNEL_CMDLINE_OFFSET;
-    size_t kernel_cmdline_strlen = strlen(kernel_cmdline);
+    size_t kernel_cmdline_strlen = tb_strlen(kernel_cmdline);
     if (kernel_cmdline_strlen > kernel_cmdline_size - 1)
         kernel_cmdline_strlen = kernel_cmdline_size - 1;
-    memset((void *)hdr->cmd_line_ptr, 0, kernel_cmdline_size);
-    memcpy((void *)hdr->cmd_line_ptr, kernel_cmdline, kernel_cmdline_strlen);
+    tb_memset((void *)hdr->cmd_line_ptr, 0, kernel_cmdline_size);
+    tb_memcpy((void *)hdr->cmd_line_ptr, kernel_cmdline, kernel_cmdline_strlen);
 
     printk(TBOOT_INFO"Linux cmdline from 0x%lx to 0x%lx:\n",
            (unsigned long)hdr->cmd_line_ptr,
@@ -343,8 +343,8 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
 
     /* need to put boot_params in real mode area so it gets mapped */
     boot_params = (boot_params_t *)(real_mode_base + real_mode_size);
-    memset(boot_params, 0, sizeof(*boot_params));
-    memcpy(&boot_params->hdr, hdr, sizeof(*hdr));
+    tb_memset(boot_params, 0, sizeof(*boot_params));
+    tb_memcpy(&boot_params->hdr, hdr, sizeof(*hdr));
 
     /* need to handle a few EFI things here if such is our parentage */
     if (is_loader_launch_efi(g_ldr_ctx)){
@@ -359,7 +359,7 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
 
 
         /* loader signature */
-        memcpy(&efi->efi_ldr_sig, "EL64", sizeof(uint32_t));
+        tb_memcpy(&efi->efi_ldr_sig, "EL64", sizeof(uint32_t));
 
         /* EFI system table addr */
         {

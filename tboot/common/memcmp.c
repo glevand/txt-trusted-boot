@@ -31,14 +31,22 @@
  */
 
 /* $FreeBSD: src/sys/libkern/memcmp.c,v 1.1 2008/09/23 14:45:10 obrien Exp $ */
-
+/*
+ * Portions copyright (c) 2010-2018, Intel Corporation
+ */
 #include <string.h>
 
 /*
  * Compare memory regions.
  */
-int memcmp(const void *s1, const void *s2, size_t n)
+int tb_memcmp(const void *s1, const void *s2, size_t n)
 {
+	if (s1 == NULL || s2 == NULL)
+		return (-1);
+
+	if (s1 == s2)
+		return (0);
+
 	if (n != 0) {
 		const unsigned char *p1 = s1, *p2 = s2;
 

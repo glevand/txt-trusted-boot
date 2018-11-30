@@ -30,7 +30,7 @@
  * $FreeBSD: src/sys/sys/libkern.h,v 1.60 2009/02/14 11:34:57 rrs Exp $
  */
 /*
- * Portions copyright (c) 2010, Intel Corporation
+ * Portions copyright (c) 2010-2018, Intel Corporation
  */
 
 #ifndef __STRING_H__
@@ -39,18 +39,18 @@
 #include <stdarg.h>
 #include <types.h>
 
-int	 memcmp(const void *b1, const void *b2, size_t len);
-char	*index(const char *, int);
-int	 strcmp(const char *, const char *);
-size_t	 strlen(const char *);
-int	 strncmp(const char *, const char *, size_t);
-char	*strncpy(char * __restrict, const char * __restrict, size_t);
-void	*memcpy(void *dst, const void *src, size_t len);
-int	 snprintf(char *buf, size_t size, const char *fmt, ...);
-int	 vscnprintf(char *buf, size_t size, const char *fmt, va_list ap);
-unsigned long strtoul(const char *nptr, char **endptr, int base);
+int	 tb_memcmp(const void *b1, const void *b2, size_t len);
+char	*tb_index(const char *, int);
+int	 tb_strcmp(const char *, const char *);
+size_t	 tb_strlen(const char *);
+int	 tb_strncmp(const char *, const char *, size_t);
+char	*tb_strncpy(char * __restrict, const char * __restrict, size_t);
+void	*tb_memcpy(void *dst, const void *src, size_t len);
+int	 tb_snprintf(char *buf, size_t size, const char *fmt, ...);
+int	 tb_vscnprintf(char *buf, size_t size, const char *fmt, va_list ap);
+unsigned long tb_strtoul(const char *nptr, char **endptr, int base);
 
-static inline void *memset(void *b, int c, size_t len)
+static inline void *tb_memset(void *b, int c, size_t len)
 {
 	char *bb;
 
@@ -60,14 +60,14 @@ static inline void *memset(void *b, int c, size_t len)
 	return (b);
 }
 
-static inline void *memmove(void *dest, const void *src, size_t n)
+static inline void *tb_memmove(void *dest, const void *src, size_t n)
 {
-	return memcpy(dest, src, n);
+	return tb_memcpy(dest, src, n);
 }
 
-static __inline char *strchr(const char *p, int ch)
+static __inline char *tb_strchr(const char *p, int ch)
 {
-	return index(p, ch);
+	return tb_index(p, ch);
 }
 
 #endif /* __STRING_H__ */

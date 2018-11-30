@@ -210,7 +210,9 @@ static void display_config_regs(void *txt_config_base)
 
 static void display_heap(txt_heap_t *heap)
 {
-    verify_bios_data(heap);
+    uint64_t size = get_bios_data_size(heap);
+    bios_data_t *bios_data = get_bios_data_start(heap);
+    print_bios_data(bios_data, size);
 }
 
 static void display_tboot_log(void *log_base)

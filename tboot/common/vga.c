@@ -46,7 +46,7 @@ uint8_t g_vga_delay = 0;       /* default to no delay */
 
 static inline void reset_screen(void)
 {
-    memset(screen, 0, SCREEN_BUFFER);
+    tb_memset(screen, 0, SCREEN_BUFFER);
     cursor_x = 0;
     cursor_y = 0;
     num_lines = 0;

@@ -70,20 +70,6 @@ static void print_bios_spec_ver_elt(const heap_ext_data_element_t *elt)
     printk(TBOOT_INFO"\t\t     rev: 0x%x\n", bios_spec_ver_elt->spec_ver_rev);
 }
 
-static bool verify_bios_spec_ver_elt(const heap_ext_data_element_t *elt)
-{
-    const heap_bios_spec_ver_elt_t *bios_spec_ver_elt =
-        (const heap_bios_spec_ver_elt_t *)elt->data;
-
-    if ( elt->size != sizeof(*elt) + sizeof(*bios_spec_ver_elt) ) {
-        printk(TBOOT_ERR"HEAP_BIOS_SPEC_VER element has wrong size (%u)\n", elt->size);
-        return false;
-    }
-
-    /* any values are allowed */
-    return true;
-}
-
 /* HEAP_ACM_ELEMENT */
 static void print_acm_elt(const heap_ext_data_element_t *elt)
 {
@@ -95,38 +81,6 @@ static void print_acm_elt(const heap_ext_data_element_t *elt)
         printk(TBOOT_DETA"\t\t     acm_addrs[%u]: 0x%jx\n", i, acm_elt->acm_addrs[i]);
 }
 
-static bool verify_acm_elt(const heap_ext_data_element_t *elt)
-{
-    const heap_acm_elt_t *acm_elt = (const heap_acm_elt_t *)elt->data;
-
-    if ( elt->size != sizeof(*elt) + sizeof(*acm_elt) +
-         acm_elt->num_acms*sizeof(uint64_t) ) {
-        printk(TBOOT_ERR"HEAP_ACM element has wrong size (%u)\n", elt->size);
-        return false;
-    }
-
-    /* no addrs is not error, but print warning */
-    if ( acm_elt->num_acms == 0 )
-        printk(TBOOT_WARN"HEAP_ACM element has no ACM addrs\n");
-
-    for ( unsigned int i = 0; i < acm_elt->num_acms; i++ ) {
-        if ( acm_elt->acm_addrs[i] == 0 ) {
-            printk(TBOOT_ERR"HEAP_ACM element ACM addr (%u) is NULL\n", i);
-            return false;
-        }
-
-        if ( acm_elt->acm_addrs[i] >= 0x100000000UL ) {
-            printk(TBOOT_ERR"HEAP_ACM element ACM addr (%u) is >4GB (0x%jx)\n", i,
-                   acm_elt->acm_addrs[i]);
-            return false;
-        }
-
-        /* not going to check if ACM addrs are valid ACMs */
-    }
-
-    return true;
-}
-
 /* HEAP_CUSTOM_ELEMENT */
 static void print_custom_elt(const heap_ext_data_element_t *elt)
 {
@@ -136,19 +90,6 @@ static void print_custom_elt(const heap_ext_data_element_t *elt)
     printk(TBOOT_DETA"\t\t     size: %u\n", elt->size);
     printk(TBOOT_DETA"\t\t     uuid: "); print_uuid(&custom_elt->uuid);            
     printk(TBOOT_DETA"\n");
-}
-
-static bool verify_custom_elt(const heap_ext_data_element_t *elt)
-{
-    const heap_custom_elt_t *custom_elt = (const heap_custom_elt_t *)elt->data;
-
-    if ( elt->size < sizeof(*elt) + sizeof(*custom_elt) ) {
-        printk(TBOOT_ERR"HEAP_CUSTOM element has wrong size (%u)\n", elt->size);
-        return false;
-    }
-
-    /* any values are allowed */
-    return true;
 }
 
 /* HEAP_EVENT_LOG_POINTER_ELEMENT */
@@ -190,36 +131,6 @@ static void print_evt_log(const event_log_container_t *elog)
     }
 }
 
-static bool verify_evt_log(const event_log_container_t *elog)
-{
-    if ( elog == NULL ) {
-        printk(TBOOT_ERR"Event log container pointer is NULL\n");
-        return false;
-    }
-
-    if ( memcmp(elog->signature, EVTLOG_SIGNATURE, sizeof(elog->signature)) ) {
-        printk(TBOOT_ERR"Bad event log container signature: %s\n", elog->signature);
-        return false;
-    }
-
-    if ( elog->size != MAX_EVENT_LOG_SIZE ) {
-        printk(TBOOT_ERR"Bad event log container size: 0x%x\n", elog->size);
-        return false;
-    }
-
-    /* no need to check versions */
-
-    if ( elog->pcr_events_offset < sizeof(*elog) ||
-         elog->next_event_offset < elog->pcr_events_offset ||
-         elog->next_event_offset > elog->size ) {
-        printk(TBOOT_ERR"Bad events offset range: [%u, %u)\n",
-               elog->pcr_events_offset, elog->next_event_offset);
-        return false;
-    }
-
-    return true;
-}
-
 static void print_evt_log_ptr_elt(const heap_ext_data_element_t *elt)
 {
     const heap_event_log_ptr_elt_t *elog_elt =
@@ -232,21 +143,6 @@ static void print_evt_log_ptr_elt(const heap_ext_data_element_t *elt)
     if ( elog_elt->event_log_phys_addr )
         print_evt_log((event_log_container_t *)(unsigned long)
                       elog_elt->event_log_phys_addr);
-}
-
-static bool verify_evt_log_ptr_elt(const heap_ext_data_element_t *elt)
-{
-    const heap_event_log_ptr_elt_t *elog_elt =
-              (const heap_event_log_ptr_elt_t *)elt->data;
-
-    if ( elt->size != sizeof(*elt) + sizeof(*elog_elt) ) {
-        printk(TBOOT_ERR"HEAP_EVENT_LOG_POINTER element has wrong size (%u)\n",
-               elt->size);
-        return false;
-    }
-
-    return verify_evt_log((event_log_container_t *)(unsigned long)
-                          elog_elt->event_log_phys_addr);
 }
 
 void print_event_2(void *evt, uint16_t alg)
@@ -476,14 +372,6 @@ static void print_evt_log_ptr_elt_2_1(const heap_ext_data_element_t *elt)
 }
 
 
-static bool verify_evt_log_ptr_elt_2(const heap_ext_data_element_t *elt)
-{
-    if ( !elt )
-        return false;
-
-    return true;
-}
-
 static void print_ext_data_elts(const heap_ext_data_element_t elts[])
 {
     const heap_ext_data_element_t *elt = elts;
@@ -516,6 +404,137 @@ static void print_ext_data_elts(const heap_ext_data_element_t elts[])
         }
         elt = (void *)elt + elt->size;
     }
+}
+
+static void print_bios_data(const bios_data_t *bios_data, uint64_t size)
+{
+    printk(TBOOT_DETA"bios_data (@%p, %jx):\n", bios_data,
+           *((uint64_t *)bios_data - 1));
+    printk(TBOOT_DETA"\t version: %u\n", bios_data->version);
+    printk(TBOOT_DETA"\t bios_sinit_size: 0x%x (%u)\n", bios_data->bios_sinit_size,
+           bios_data->bios_sinit_size);
+    printk(TBOOT_DETA"\t lcp_pd_base: 0x%jx\n", bios_data->lcp_pd_base);
+    printk(TBOOT_DETA"\t lcp_pd_size: 0x%jx (%ju)\n", bios_data->lcp_pd_size,
+           bios_data->lcp_pd_size);
+    printk(TBOOT_DETA"\t num_logical_procs: %u\n", bios_data->num_logical_procs);
+    if ( bios_data->version >= 3 )
+        printk(TBOOT_DETA"\t flags: 0x%08jx\n", bios_data->flags);
+    if ( bios_data->version >= 4 && size > sizeof(*bios_data) + sizeof(size) )
+        print_ext_data_elts(bios_data->ext_data_elts);
+}
+
+#ifndef IS_INCLUDED
+
+static bool verify_bios_spec_ver_elt(const heap_ext_data_element_t *elt)
+{
+    const heap_bios_spec_ver_elt_t *bios_spec_ver_elt =
+        (const heap_bios_spec_ver_elt_t *)elt->data;
+
+    if ( elt->size != sizeof(*elt) + sizeof(*bios_spec_ver_elt) ) {
+        printk(TBOOT_ERR"HEAP_BIOS_SPEC_VER element has wrong size (%u)\n", elt->size);
+        return false;
+    }
+
+    /* any values are allowed */
+    return true;
+}
+
+static bool verify_acm_elt(const heap_ext_data_element_t *elt)
+{
+    const heap_acm_elt_t *acm_elt = (const heap_acm_elt_t *)elt->data;
+
+    if ( elt->size != sizeof(*elt) + sizeof(*acm_elt) +
+         acm_elt->num_acms*sizeof(uint64_t) ) {
+        printk(TBOOT_ERR"HEAP_ACM element has wrong size (%u)\n", elt->size);
+        return false;
+    }
+
+    /* no addrs is not error, but print warning */
+    if ( acm_elt->num_acms == 0 )
+        printk(TBOOT_WARN"HEAP_ACM element has no ACM addrs\n");
+
+    for ( unsigned int i = 0; i < acm_elt->num_acms; i++ ) {
+        if ( acm_elt->acm_addrs[i] == 0 ) {
+            printk(TBOOT_ERR"HEAP_ACM element ACM addr (%u) is NULL\n", i);
+            return false;
+        }
+
+        if ( acm_elt->acm_addrs[i] >= 0x100000000UL ) {
+            printk(TBOOT_ERR"HEAP_ACM element ACM addr (%u) is >4GB (0x%jx)\n", i,
+                   acm_elt->acm_addrs[i]);
+            return false;
+        }
+
+        /* not going to check if ACM addrs are valid ACMs */
+    }
+
+    return true;
+}
+
+static bool verify_custom_elt(const heap_ext_data_element_t *elt)
+{
+    const heap_custom_elt_t *custom_elt = (const heap_custom_elt_t *)elt->data;
+
+    if ( elt->size < sizeof(*elt) + sizeof(*custom_elt) ) {
+        printk(TBOOT_ERR"HEAP_CUSTOM element has wrong size (%u)\n", elt->size);
+        return false;
+    }
+
+    /* any values are allowed */
+    return true;
+}
+
+static bool verify_evt_log(const event_log_container_t *elog)
+{
+    if ( elog == NULL ) {
+        printk(TBOOT_ERR"Event log container pointer is NULL\n");
+        return false;
+    }
+
+    if ( tb_memcmp(elog->signature, EVTLOG_SIGNATURE, sizeof(elog->signature)) ) {
+        printk(TBOOT_ERR"Bad event log container signature: %s\n", elog->signature);
+        return false;
+    }
+
+    if ( elog->size != MAX_EVENT_LOG_SIZE ) {
+        printk(TBOOT_ERR"Bad event log container size: 0x%x\n", elog->size);
+        return false;
+    }
+
+    /* no need to check versions */
+
+    if ( elog->pcr_events_offset < sizeof(*elog) ||
+         elog->next_event_offset < elog->pcr_events_offset ||
+         elog->next_event_offset > elog->size ) {
+        printk(TBOOT_ERR"Bad events offset range: [%u, %u)\n",
+               elog->pcr_events_offset, elog->next_event_offset);
+        return false;
+    }
+
+    return true;
+}
+
+static bool verify_evt_log_ptr_elt(const heap_ext_data_element_t *elt)
+{
+    const heap_event_log_ptr_elt_t *elog_elt =
+              (const heap_event_log_ptr_elt_t *)elt->data;
+
+    if ( elt->size != sizeof(*elt) + sizeof(*elog_elt) ) {
+        printk(TBOOT_ERR"HEAP_EVENT_LOG_POINTER element has wrong size (%u)\n",
+               elt->size);
+        return false;
+    }
+
+    return verify_evt_log((event_log_container_t *)(unsigned long)
+                          elog_elt->event_log_phys_addr);
+}
+
+static bool verify_evt_log_ptr_elt_2(const heap_ext_data_element_t *elt)
+{
+    if ( !elt )
+        return false;
+
+    return true;
 }
 
 static bool verify_ext_data_elts(const heap_ext_data_element_t elts[],
@@ -565,24 +584,6 @@ static bool verify_ext_data_elts(const heap_ext_data_element_t elts[],
         elt = (void *)elt + elt->size;
     }
     return true;
-}
-
-
-static void print_bios_data(const bios_data_t *bios_data, uint64_t size)
-{
-    printk(TBOOT_DETA"bios_data (@%p, %jx):\n", bios_data,
-           *((uint64_t *)bios_data - 1));
-    printk(TBOOT_DETA"\t version: %u\n", bios_data->version);
-    printk(TBOOT_DETA"\t bios_sinit_size: 0x%x (%u)\n", bios_data->bios_sinit_size,
-           bios_data->bios_sinit_size);
-    printk(TBOOT_DETA"\t lcp_pd_base: 0x%jx\n", bios_data->lcp_pd_base);
-    printk(TBOOT_DETA"\t lcp_pd_size: 0x%jx (%ju)\n", bios_data->lcp_pd_size,
-           bios_data->lcp_pd_size);
-    printk(TBOOT_DETA"\t num_logical_procs: %u\n", bios_data->num_logical_procs);
-    if ( bios_data->version >= 3 )
-        printk(TBOOT_DETA"\t flags: 0x%08jx\n", bios_data->flags);
-    if ( bios_data->version >= 4 && size > sizeof(*bios_data) + sizeof(size) )
-        print_ext_data_elts(bios_data->ext_data_elts);
 }
 
 bool verify_bios_data(const txt_heap_t *txt_heap)
@@ -641,8 +642,6 @@ bool verify_bios_data(const txt_heap_t *txt_heap)
 
     return true;
 }
-
-#ifndef IS_INCLUDED
 
 static void print_os_mle_data(const os_mle_data_t *os_mle_data)
 {

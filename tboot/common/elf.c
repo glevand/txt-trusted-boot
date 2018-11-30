@@ -208,10 +208,10 @@ bool expand_elf_image(const void *image, void **entry_point)
        for ( int i = 0; i < elf->e_phnum; i++ ) {
            elf64_program_header_t *ph = (elf64_program_header_t *)((void *)elf + elf->e_phoff + i*elf->e_phentsize);
            if ( ph->p_type == PT_LOAD ) {
-              memcpy((void *)(unsigned long)ph->p_paddr, (void *)elf +(unsigned long) ph->p_offset,(unsigned long) ph->p_filesz);
-              //memcpy((void *)ph->p_paddr, (void *)elf + ph->p_offset, ph->p_filesz);
-              memset((void *)(unsigned long)(ph->p_paddr + ph->p_filesz), 0, (unsigned long)ph->p_memsz -(unsigned long) ph->p_filesz);
-              //memset((void *)(ph->p_paddr + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+              tb_memcpy((void *)(unsigned long)ph->p_paddr, (void *)elf +(unsigned long) ph->p_offset,(unsigned long) ph->p_filesz);
+              //tb_memcpy((void *)ph->p_paddr, (void *)elf + ph->p_offset, ph->p_filesz);
+              tb_memset((void *)(unsigned long)(ph->p_paddr + ph->p_filesz), 0, (unsigned long)ph->p_memsz -(unsigned long) ph->p_filesz);
+              //tb_memset((void *)(ph->p_paddr + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
            }
        }
        *entry_point = (void *)(unsigned long)(elf->e_entry);
@@ -225,8 +225,8 @@ bool expand_elf_image(const void *image, void **entry_point)
        for ( int i = 0; i < elf->e_phnum; i++ ) {
            elf_program_header_t *ph = (elf_program_header_t *)((void *)elf + elf->e_phoff + i*elf->e_phentsize);
            if ( ph->p_type == PT_LOAD ) {
-              memcpy((void *)ph->p_paddr, (void *)elf + ph->p_offset, ph->p_filesz);
-              memset((void *)(ph->p_paddr + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+              tb_memcpy((void *)ph->p_paddr, (void *)elf + ph->p_offset, ph->p_filesz);
+              tb_memset((void *)(ph->p_paddr + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
            }
        }
       *entry_point = (void *)elf->e_entry;

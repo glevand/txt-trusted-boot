@@ -116,7 +116,7 @@ static const tb_loglvl_map_t g_loglvl_map[] = {
 static const char* get_option_val(const cmdline_option_t *options,  char vals[][MAX_VALUE_LEN],    const char *opt_name)
 {
     for ( int i = 0; options[i].name != NULL; i++ ) {
-        if ( strcmp(options[i].name, opt_name) == 0 )
+        if ( tb_strcmp(options[i].name, opt_name) == 0 )
             return vals[i];
     }
     printk(TBOOT_ERR"requested unknown option: %s\n", opt_name);
@@ -131,7 +131,7 @@ static void cmdline_parse(const char *cmdline, const cmdline_option_t *options,
 
     /* copy default values to vals[] */
     for ( i = 0; options[i].name != NULL; i++ ) {
-        strncpy(vals[i], options[i].def_val, MAX_VALUE_LEN-1);
+        tb_strncpy(vals[i], options[i].def_val, MAX_VALUE_LEN-1);
         vals[i][MAX_VALUE_LEN-1] = '\0';
     }
 
@@ -149,13 +149,13 @@ static void cmdline_parse(const char *cmdline, const cmdline_option_t *options,
 
         /* find end of current option */
         const char *opt_start = p;
-        const char *opt_end = strchr(opt_start, ' ');
+        const char *opt_end = tb_strchr(opt_start, ' ');
         if ( opt_end == NULL )
-            opt_end = opt_start + strlen(opt_start);
+            opt_end = opt_start + tb_strlen(opt_start);
         p = opt_end;
 
         /* find value part; if no value found, use default and continue */
-        const char *val_start = strchr(opt_start, '=');
+        const char *val_start = tb_strchr(opt_start, '=');
         if ( val_start == NULL || val_start > opt_end )
             continue;
         val_start++;
@@ -169,8 +169,8 @@ static void cmdline_parse(const char *cmdline, const cmdline_option_t *options,
 
         /* value found, so copy it */
         for ( i = 0; options[i].name != NULL; i++ ) {
-            if ( strncmp(options[i].name, opt_start, opt_name_size ) == 0 ) {
-                strncpy(vals[i], val_start, copy_size);
+            if ( tb_strncmp(options[i].name, opt_start, opt_name_size ) == 0 ) {
+                tb_strncpy(vals[i], val_start, copy_size);
                 vals[i][copy_size] = '\0'; /* add '\0' to the end of string */
                 break;
             }
@@ -221,9 +221,9 @@ void get_tboot_loglvl(void)
         unsigned int i;
 
         for ( i = 0; i < ARRAY_SIZE(g_loglvl_map); i++ ) {
-            if ( strncmp(loglvl, g_loglvl_map[i].log_name,
-                     strlen(g_loglvl_map[i].log_name)) == 0 ) {
-                loglvl += strlen(g_loglvl_map[i].log_name);
+            if ( tb_strncmp(loglvl, g_loglvl_map[i].log_name,
+                     tb_strlen(g_loglvl_map[i].log_name)) == 0 ) {
+                loglvl += tb_strlen(g_loglvl_map[i].log_name);
 
                 if ( g_loglvl_map[i].log_val == TBOOT_LOG_LEVEL_NONE ) {
                     g_log_level = TBOOT_LOG_LEVEL_NONE;
@@ -257,7 +257,7 @@ void get_tboot_log_targets(void)
         return;
 
     /* determine if no targets set explicitly */
-    if ( strcmp(targets, "none") == 0 ) {
+    if ( tb_strcmp(targets, "none") == 0 ) {
         g_log_targets = TBOOT_LOG_TARGET_NONE; /* print nothing */
         return;
     }
@@ -266,15 +266,15 @@ void get_tboot_log_targets(void)
     g_log_targets = TBOOT_LOG_TARGET_NONE;
 
     while ( *targets != '\0' ) {
-        if ( strncmp(targets, "memory", 6) == 0 ) {
+        if ( tb_strncmp(targets, "memory", 6) == 0 ) {
             g_log_targets |= TBOOT_LOG_TARGET_MEMORY;
             targets += 6;
         }
-        else if ( strncmp(targets, "serial", 6) == 0 ) {
+        else if ( tb_strncmp(targets, "serial", 6) == 0 ) {
             g_log_targets |= TBOOT_LOG_TARGET_SERIAL;
             targets += 6;
         }
-        else if ( strncmp(targets, "vga", 3) == 0 ) {
+        else if ( tb_strncmp(targets, "vga", 3) == 0 ) {
             g_log_targets |= TBOOT_LOG_TARGET_VGA;
             targets += 3;
         }
@@ -291,15 +291,15 @@ void get_tboot_log_targets(void)
 static bool parse_pci_bdf(const char **bdf, uint32_t *bus, uint32_t *slot,
                           uint32_t *func)
 {
-    *bus = strtoul(*bdf, (char **)bdf, 16);
+    *bus = tb_strtoul(*bdf, (char **)bdf, 16);
     if ( **bdf != ':' )
         return false;
     (*bdf)++;
-    *slot = strtoul(*bdf, (char **)bdf, 16);
+    *slot = tb_strtoul(*bdf, (char **)bdf, 16);
     if ( **bdf != '.' )
         return false;
     (*bdf)++;
-    *func = strtoul(*bdf, (char **)bdf, 16);
+    *func = tb_strtoul(*bdf, (char **)bdf, 16);
 
     return true;
 }
@@ -336,7 +336,7 @@ static bool parse_com_fmt(const char **fmt)
 
 
     /* must specify all values */
-    if ( strlen(*fmt) < 3 )
+    if ( tb_strlen(*fmt) < 3 )
         return false;
 
     /* data bits */
@@ -369,7 +369,7 @@ static bool parse_com_fmt(const char **fmt)
 static bool parse_serial_param(const char *com)
 {
     /* parse baud */
-    g_com_port.comc_curspeed = strtoul(com, (char **)&com, 10);
+    g_com_port.comc_curspeed = tb_strtoul(com, (char **)&com, 10);
     if ( (g_com_port.comc_curspeed < 1200) ||
          (g_com_port.comc_curspeed > 115200) )
         return false;
@@ -377,7 +377,7 @@ static bool parse_serial_param(const char *com)
     /* parse clock hz */
     if ( *com == '/' ) {
         ++com;
-        g_com_port.comc_clockhz = strtoul(com, (char **)&com, 0) << 4;
+        g_com_port.comc_clockhz = tb_strtoul(com, (char **)&com, 0) << 4;
         if ( g_com_port.comc_clockhz == 0 )
             return false;
     }
@@ -395,7 +395,7 @@ static bool parse_serial_param(const char *com)
     if ( *com != ',' )
         goto exit;
     ++com;
-    g_com_port.comc_port = strtoul(com, (char **)&com, 0);
+    g_com_port.comc_port = tb_strtoul(com, (char **)&com, 0);
     if ( g_com_port.comc_port == 0 )
         return false;
 
@@ -403,7 +403,7 @@ static bool parse_serial_param(const char *com)
     if ( *com != ',' )
         goto exit;
     ++com;
-    g_com_port.comc_irq = strtoul(com, (char **)&com, 10);
+    g_com_port.comc_irq = tb_strtoul(com, (char **)&com, 10);
     if ( g_com_port.comc_irq == 0 )
         return false;
 
@@ -442,14 +442,14 @@ void get_tboot_vga_delay(void)
     if ( vga_delay == NULL )
         return;
 
-    g_vga_delay = strtoul(vga_delay, NULL, 0);
+    g_vga_delay = tb_strtoul(vga_delay, NULL, 0);
 }
 
 bool get_tboot_prefer_da(void)
 {
     const char *value = get_option_val(g_tboot_cmdline_options,
                                        g_tboot_param_values, "pcr_map");
-    if ( value != NULL && strcmp(value, "da") == 0 )
+    if ( value != NULL && tb_strcmp(value, "da") == 0 )
         return true;
 
     return false;
@@ -463,14 +463,14 @@ void get_tboot_min_ram(void)
     if ( min_ram == NULL )
         return;
 
-    g_min_ram = strtoul(min_ram, NULL, 0);
+    g_min_ram = tb_strtoul(min_ram, NULL, 0);
 }
 
 bool get_tboot_mwait(void)
 {
     const char *mwait = get_option_val(g_tboot_cmdline_options,
                                        g_tboot_param_values, "ap_wake_mwait");
-    if ( mwait == NULL || strcmp(mwait, "false") == 0 )
+    if ( mwait == NULL || tb_strcmp(mwait, "false") == 0 )
         return false;
     return true;
 }
@@ -479,7 +479,7 @@ bool get_tboot_call_racm(void)
 {
     const char *call_racm = get_option_val(g_tboot_cmdline_options,
                                        g_tboot_param_values, "call_racm");
-    if ( call_racm == NULL || strcmp(call_racm, "true") != 0 )
+    if ( call_racm == NULL || tb_strcmp(call_racm, "true") != 0 )
         return false;
     return true;
 }
@@ -488,7 +488,7 @@ bool get_tboot_call_racm_check(void)
 {
     const char *call_racm = get_option_val(g_tboot_cmdline_options,
                                        g_tboot_param_values, "call_racm");
-    if ( call_racm == NULL || strcmp(call_racm, "check") != 0 )
+    if ( call_racm == NULL || tb_strcmp(call_racm, "check") != 0 )
         return false;
     return true;
 }
@@ -497,7 +497,7 @@ bool get_tboot_measure_nv(void)
 {
     const char *measure_nv = get_option_val(g_tboot_cmdline_options,
                                        g_tboot_param_values, "measure_nv");
-    if ( measure_nv == NULL || strcmp(measure_nv, "true") != 0 )
+    if ( measure_nv == NULL || tb_strcmp(measure_nv, "true") != 0 )
         return false;
     return true;
 }
@@ -513,19 +513,19 @@ void get_tboot_extpol(void)
         return;
     }
 
-    if ( strcmp(extpol, "agile") == 0 ) {
+    if ( tb_strcmp(extpol, "agile") == 0 ) {
         tpm->extpol = TB_EXTPOL_AGILE;
         tpm->cur_alg = TB_HALG_SHA256;
-    } else if ( strcmp(extpol, "embedded") == 0 ) {
+    } else if ( tb_strcmp(extpol, "embedded") == 0 ) {
         tpm->extpol = TB_EXTPOL_EMBEDDED;
         tpm->cur_alg = TB_HALG_SHA256;
-    } else if ( strcmp(extpol, "sha256") == 0 ) {
+    } else if ( tb_strcmp(extpol, "sha256") == 0 ) {
         tpm->extpol = TB_EXTPOL_FIXED;
         tpm->cur_alg = TB_HALG_SHA256;
-    } else if ( strcmp(extpol, "sha1") == 0 ) {
+    } else if ( tb_strcmp(extpol, "sha1") == 0 ) {
         tpm->extpol = TB_EXTPOL_FIXED;
         tpm->cur_alg = TB_HALG_SHA1;
-    } else if ( strcmp(extpol, "sm3") == 0 ) {
+    } else if ( tb_strcmp(extpol, "sm3") == 0 ) {
         tpm->extpol = TB_EXTPOL_FIXED;
         tpm->cur_alg = TB_HALG_SM3;
     }
@@ -537,7 +537,7 @@ bool get_tboot_force_tpm2_legacy_log(void)
        get_option_val(g_tboot_cmdline_options,
               g_tboot_param_values,
               "force_tpm2_legacy_log");
-    if ( force_legacy_log != NULL && strcmp(force_legacy_log, "true") == 0 )
+    if ( force_legacy_log != NULL && tb_strcmp(force_legacy_log, "true") == 0 )
        return true;
     return false;
 }
@@ -548,7 +548,7 @@ bool get_tboot_ignore_prev_err(void)
 	    get_option_val(g_tboot_cmdline_options,
 			   g_tboot_param_values,
 			   "ignore_prev_err");
-    if ( ignore_prev_err == NULL || strcmp(ignore_prev_err, "true") == 0 )
+    if ( ignore_prev_err == NULL || tb_strcmp(ignore_prev_err, "true") == 0 )
 	    return true;
     return false;
 }
@@ -559,7 +559,7 @@ bool get_tboot_save_vtd(void)
        get_option_val(g_tboot_cmdline_options,
               g_tboot_param_values,
               "save_vtd");
-    if ( save_vtd != NULL && strcmp(save_vtd, "true") == 0 )
+    if ( save_vtd != NULL && tb_strcmp(save_vtd, "true") == 0 )
        return true;
     return false;
 }
@@ -575,14 +575,14 @@ bool get_linux_vga(int *vid_mode)
     if ( vga == NULL || vid_mode == NULL )
         return false;
 
-    if ( strcmp(vga, "normal") == 0 )
+    if ( tb_strcmp(vga, "normal") == 0 )
         *vid_mode = 0xFFFF;
-    else if ( strcmp(vga, "ext") == 0 )
+    else if ( tb_strcmp(vga, "ext") == 0 )
         *vid_mode = 0xFFFE;
-    else if ( strcmp(vga, "ask") == 0 )
+    else if ( tb_strcmp(vga, "ask") == 0 )
         *vid_mode = 0xFFFD;
     else
-        *vid_mode = strtoul(vga, NULL, 0);
+        *vid_mode = tb_strtoul(vga, NULL, 0);
 
     return true;
 }
@@ -595,7 +595,7 @@ bool get_linux_mem(uint64_t *max_mem)
     if ( mem == NULL || max_mem == NULL )
         return false;
 
-    *max_mem = strtoul(mem, &last, 0);
+    *max_mem = tb_strtoul(mem, &last, 0);
     if ( *max_mem == 0 )
         return false;
 

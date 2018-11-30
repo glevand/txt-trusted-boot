@@ -243,7 +243,7 @@ static size_t int2str(long long val, char *str, size_t strlen,
     return length;
 }
 
-int vscnprintf(char *buf, size_t size, const char *fmt, va_list ap)
+int tb_vscnprintf(char *buf, size_t size, const char *fmt, va_list ap)
 {
     unsigned int buf_pos = 0; /* return value doesn't count the last '\0' */
     const char *fmt_ptr;
@@ -257,7 +257,7 @@ int vscnprintf(char *buf, size_t size, const char *fmt, va_list ap)
     if ( fmt == NULL )
         return 0;
 
-    memset(&mods, 0, sizeof(mods));
+    tb_memset(&mods, 0, sizeof(mods));
 
     while ( buf_pos < size ) {
         bool success;
@@ -310,7 +310,7 @@ handle_width:
             fmt_ptr++;
         }
         else
-            mods.width = strtoul(fmt_ptr, (char **)&fmt_ptr, 10);
+            mods.width = tb_strtoul(fmt_ptr, (char **)&fmt_ptr, 10);
 
         if ( *fmt_ptr == '.' ) {
             /* skip . */
@@ -322,7 +322,7 @@ handle_width:
                 fmt_ptr++;
             }
             else
-                mods.precision = strtoul(fmt_ptr, (char **)&fmt_ptr, 10);
+                mods.precision = tb_strtoul(fmt_ptr, (char **)&fmt_ptr, 10);
         }
 
         /* parsing qualifier: h l L;
@@ -377,7 +377,7 @@ handle_width:
                 str[0] = (char)va_arg(ap, int);
                 mods.digit = false;
                 buf_pos = write_string_to_buffer(
-                              buf, size, buf_pos, str, strlen(str), &mods);
+                              buf, size, buf_pos, str, tb_strlen(str), &mods);
                 break;
             }
         case 's':
@@ -387,7 +387,7 @@ handle_width:
                 str = va_arg(ap, char *);
                 mods.digit = false;
                 buf_pos = write_string_to_buffer(
-                              buf, size, buf_pos, str, strlen(str), &mods);
+                              buf, size, buf_pos, str, tb_strlen(str), &mods);
                 break;
             }
         case 'o':
@@ -444,11 +444,11 @@ handle_width:
     return buf_pos - 1;
 }
 
-int snprintf(char *buf, size_t size, const char *fmt, ...)
+int tb_snprintf(char *buf, size_t size, const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);
-    int count = vscnprintf(buf, size, fmt, ap);
+    int count = tb_vscnprintf(buf, size, fmt, ap);
 	va_end(ap);
     return count;
 }

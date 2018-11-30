@@ -127,7 +127,7 @@ static void memlog_write( const char *str, unsigned int count)
                     /*  Add the new compressed chunk to the log buffer,
                         over-writing the last part of the log that was just
                         compressed */
-                    memcpy(&g_log->buf[zip_pos], out, zip_size);
+                    tb_memcpy(&g_log->buf[zip_pos], out, zip_size);
                     g_log->zip_size[g_log->zip_count] = zip_size;
                     g_log->zip_count++;
                     g_log->curr_pos = zip_pos + zip_size;
@@ -152,7 +152,7 @@ static void memlog_write( const char *str, unsigned int count)
         }
     }
 
-    memcpy(&g_log->buf[g_log->curr_pos], str, count);
+    tb_memcpy(&g_log->buf[g_log->curr_pos], str, count);
     g_log->curr_pos += count; 
 
     /* if the string wasn't NULL-terminated, then NULL-terminate the log */
@@ -205,9 +205,9 @@ void printk(const char *fmt, ...)
     uint8_t log_level;
     static bool last_line_cr = true;
 
-    memset(buf, '\0', sizeof(buf));
+    tb_memset(buf, '\0', sizeof(buf));
     va_start(ap, fmt);
-    n = vscnprintf(buf, sizeof(buf), fmt, ap);
+    n = tb_vscnprintf(buf, sizeof(buf), fmt, ap);
 
     log_level = get_loglvl_prefix(&pbuf, &n);
 

@@ -32,12 +32,13 @@
 
 #include <string.h>
 
-int strncmp(s1, s2, n)
+int tb_strncmp(s1, s2, n)
 	register const char *s1, *s2;
 	register size_t n;
 {
-
-	if (n == 0)
+	if (s1 == NULL || s2 == NULL)
+		return(-1);
+	if (n == 0 || s1 == s2)
 		return (0);
 	do {
 		if (*s1 != *s2++)

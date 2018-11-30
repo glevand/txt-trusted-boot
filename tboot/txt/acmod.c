@@ -685,7 +685,7 @@ acm_hdr_t *copy_racm(const acm_hdr_t *racm)
     printk(TBOOT_DETA"RACM.SIZE: 0x%x (%u)\n", racm_region_size, racm_region_size);
 
     /* copy it there */
-    memcpy(racm_region_base, racm, racm->size*4);
+    tb_memcpy(racm_region_base, racm, racm->size*4);
 
     printk(TBOOT_DETA"copied RACM (size=%x) to %p\n", racm->size*4,
            racm_region_base);
@@ -744,7 +744,7 @@ acm_hdr_t *copy_sinit(const acm_hdr_t *sinit)
        return NULL;
 
     /* copy it there */
-    memcpy(sinit_region_base, sinit, sinit->size*4);
+    tb_memcpy(sinit_region_base, sinit, sinit->size*4);
 
     printk(TBOOT_DETA"copied SINIT (size=%x) to %p\n", sinit->size*4,
            sinit_region_base);

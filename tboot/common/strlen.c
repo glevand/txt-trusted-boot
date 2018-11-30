@@ -32,11 +32,13 @@
 
 #include <string.h>
 
-size_t strlen(str)
+size_t tb_strlen(str)
 	const char *str;
 {
 	register const char *s;
 
+	if (str == NULL)
+		return 0;
 	for (s = str; *s; ++s);
 	return(s - str);
 }

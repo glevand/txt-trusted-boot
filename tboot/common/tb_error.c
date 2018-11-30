@@ -144,7 +144,7 @@ bool read_tb_error_code(tb_error_t *error)
         return false;
     }
 
-    memset(error, 0, size);
+    tb_memset(error, 0, size);
 
     if ( get_tboot_ignore_prev_err() )
         return true;

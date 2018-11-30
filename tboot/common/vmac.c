@@ -1170,7 +1170,7 @@ int main(void)
     /* Initialize context and message buffer, all 16-byte aligned */
     p = malloc(buf_len + 32);
     m = (unsigned char *)(((size_t)p + 16) & ~((size_t)15));
-    memset(m, 0, buf_len + 16);
+    tb_memset(m, 0, buf_len + 16);
     vmac_set_key(key, &ctx);
 
     /* Test incremental and all-in-one interfaces for correctness */

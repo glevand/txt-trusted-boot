@@ -125,11 +125,8 @@ static inline const char *hash_type_to_string(uint8_t hash_type)
         return "TB_HTYPE_ANY";
     else if ( hash_type == TB_HTYPE_IMAGE )
         return "TB_HTYPE_IMAGE";
-    else {
-        static char buf[32];
-        snprintf(buf, sizeof(buf), "unsupported (%u)", hash_type);
-        return buf;
-    }
+    else 
+        return "unsupported";
 }
 
 static inline const char *policy_type_to_string(uint8_t policy_type)
@@ -140,21 +137,16 @@ static inline const char *policy_type_to_string(uint8_t policy_type)
         return "TB_POLTYPE_CONT_VERIFY_FAIL";
     else if ( policy_type == TB_POLTYPE_HALT )
         return "TB_POLTYPE_HALT";
-    else {
-        static char buf[32];
-        snprintf(buf, sizeof(buf), "unsupported (%u)", policy_type);
-        return buf;
-    }
+    else 
+        return "unsupported";
 }
 
 static inline const char *policy_control_to_string(uint32_t policy_control)
 {
-    static char buf[64] = "";
-
     if ( policy_control & TB_POLCTL_EXTEND_PCR17 )
-        strncpy(buf, "EXTEND_PCR17", sizeof(buf));
-
-    return buf;
+        return "EXTEND_PCR17";
+    else
+        return "";
 }
 
 static inline size_t calc_policy_entry_size(const tb_policy_entry_t *pol_entry,

@@ -171,7 +171,7 @@ static bool start_vmx(unsigned int cpuid)
     /* only initialize this data the first time */
     if ( !init_done ) {
         /*printk(TBOOT_INFO"one-time initializing VMX mini-guest\n");*/
-        memset(vmcs, 0, PAGE_SIZE);
+        tb_memset(vmcs, 0, PAGE_SIZE);
 
         init_vmcs_config();
         vmcs->vmcs_revision_id = vmcs_rev_id;
@@ -424,7 +424,7 @@ static bool vmx_create_vmcs(unsigned int cpuid)
 {
     struct vmcs_struct *vmcs = (struct vmcs_struct *)&ap_vmcs[cpuid];
 
-    memset(vmcs, 0, PAGE_SIZE);
+    tb_memset(vmcs, 0, PAGE_SIZE);
 
     vmcs->vmcs_revision_id = vmcs_rev_id;
 

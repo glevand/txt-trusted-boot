@@ -62,7 +62,7 @@ bool are_hashes_equal(const tb_hash_t *hash1, const tb_hash_t *hash2,
 
     len = get_hash_size(hash_alg);
     if ( len > 0 )
-        return (memcmp(hash1, hash2, len) == 0);
+        return (tb_memcmp(hash1, hash2, len) == 0);
     else {
         printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);
         return false;
@@ -117,14 +117,14 @@ bool extend_hash(tb_hash_t *hash1, const tb_hash_t *hash2, uint16_t hash_alg)
     }
 
     if ( hash_alg == TB_HALG_SHA1 ) {
-        memcpy(buf, &(hash1->sha1), sizeof(hash1->sha1));
-        memcpy(buf + sizeof(hash1->sha1), &(hash2->sha1), sizeof(hash1->sha1));
+        tb_memcpy(buf, &(hash1->sha1), sizeof(hash1->sha1));
+        tb_memcpy(buf + sizeof(hash1->sha1), &(hash2->sha1), sizeof(hash1->sha1));
         sha1_buffer(buf, 2*sizeof(hash1->sha1), hash1->sha1);
         return true;
     }
     else if ( hash_alg == TB_HALG_SHA256 ) {
-        memcpy(buf, &(hash1->sha256), sizeof(hash1->sha256));
-        memcpy(buf + sizeof(hash1->sha256), &(hash2->sha256), sizeof(hash1->sha256));
+        tb_memcpy(buf, &(hash1->sha256), sizeof(hash1->sha256));
+        tb_memcpy(buf + sizeof(hash1->sha256), &(hash2->sha256), sizeof(hash1->sha256));
         sha256_buffer(buf, 2*sizeof(hash1->sha256), hash1->sha256);
         return true;
     }
@@ -171,7 +171,7 @@ void copy_hash(tb_hash_t *dest_hash, const tb_hash_t *src_hash,
 
     len = get_hash_size(hash_alg);
     if ( len > 0 )
-        memcpy(dest_hash, src_hash, len);
+        tb_memcpy(dest_hash, src_hash, len);
     else
         printk(TBOOT_WARN"unsupported hash alg (%u)\n", hash_alg);
 }

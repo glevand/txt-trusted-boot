@@ -36,7 +36,7 @@
  * index() is also present as the strchr() in the kernel; it does exactly the
  * same thing as it's userland equivalent.
  */
-char *index(p, ch)
+char *tb_index(p, ch)
 	const char *p;
 	int ch;
 {
@@ -45,6 +45,8 @@ char *index(p, ch)
 		char *p;
 	} u;
 
+	if (p == NULL)
+		return(NULL);
 	u.cp = p;
 	for (;; ++u.p) {
 		if (*u.p == ch)

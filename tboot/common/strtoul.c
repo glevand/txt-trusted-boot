@@ -45,7 +45,7 @@
  * Ignores `locale' stuff.  Assumes that the upper and lower case
  * alphabets and digits are each contiguous.
  */
-unsigned long strtoul(const char *nptr, char **endptr, int base)
+unsigned long tb_strtoul(const char *nptr, char **endptr, int base)
 {
 	const char *s = nptr;
 	unsigned long acc;
@@ -53,6 +53,8 @@ unsigned long strtoul(const char *nptr, char **endptr, int base)
 	unsigned long cutoff;
 	int neg = 0, any, cutlim;
 
+	if (nptr == NULL)
+		return ULONG_MAX;
 	/*
 	 * See strtol for comments as to the logic used.
 	 */

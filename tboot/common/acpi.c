@@ -108,7 +108,7 @@ static bool find_rsdp_in_range(void *start, void *end)
     for ( ; start < end; start += RSDP_BOUNDARY ) {
         rsdp = (struct acpi_rsdp *)start;
 
-        if ( memcmp(rsdp->rsdp1.signature, RSDP_SIG,
+        if ( tb_memcmp(rsdp->rsdp1.signature, RSDP_SIG,
                     sizeof(rsdp->rsdp1.signature)) == 0 ) {
             if ( verify_acpi_checksum((uint8_t *)rsdp, RSDP_CHKSUM_LEN) ) {
                 printk(TBOOT_DETA"RSDP (v%u, %.6s) @ %p\n", rsdp->rsdp1.revision,
@@ -189,7 +189,7 @@ static struct acpi_table_header *find_table(const char *table_name)
               curr_table < (uint64_t *)((void *)xsdt + xsdt->hdr.length);
               curr_table++ ) {
             table = (struct acpi_table_header *)(uintptr_t)*curr_table;
-            if ( memcmp(table->signature, table_name,
+            if ( tb_memcmp(table->signature, table_name,
                         sizeof(table->signature)) == 0 )
                 return table;
         }
@@ -206,7 +206,7 @@ static struct acpi_table_header *find_table(const char *table_name)
               curr_table < (uint32_t *)((void *)rsdt + rsdt->hdr.length);
               curr_table++ ) {
             table = (struct acpi_table_header *)(uintptr_t)*curr_table;
-            if ( memcmp(table->signature, table_name,
+            if ( tb_memcmp(table->signature, table_name,
                         sizeof(table->signature)) == 0 )
                 return table;
         }
@@ -255,7 +255,7 @@ bool restore_vtd_dmar_table(void)
     }
 
     /* restore DMAR if needed */
-    memcpy(g_dmar_table->signature, DMAR_SIG, sizeof(g_dmar_table->signature));
+    tb_memcpy(g_dmar_table->signature, DMAR_SIG, sizeof(g_dmar_table->signature));
 
     /* need to hide DMAR table while resume from S3 */
     g_hide_dmar = true;

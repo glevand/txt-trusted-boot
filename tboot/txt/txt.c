@@ -178,7 +178,7 @@ static void *build_mle_pagetable(uint32_t mle_start, uint32_t mle_size)
     /* place ptab_base below MLE */
     ptab_size = sizeof(g_mle_pt);
     ptab_base = &g_mle_pt;
-    memset(ptab_base, 0, ptab_size);
+    tb_memset(ptab_base, 0, ptab_size);
     printk(TBOOT_DETA"ptab_size=%x, ptab_base=%p\n", ptab_size, ptab_base);
 
     pg_dir_ptr_tab = ptab_base;
@@ -214,7 +214,7 @@ static void *init_event_log(void)
     os_mle_data_t *os_mle_data = get_os_mle_data_start(get_txt_heap());
     g_elog = (event_log_container_t *)&os_mle_data->event_log_buffer;
 
-    memcpy((void *)g_elog->signature, EVTLOG_SIGNATURE,
+    tb_memcpy((void *)g_elog->signature, EVTLOG_SIGNATURE,
            sizeof(g_elog->signature));
     g_elog->container_ver_major = EVTLOG_CNTNR_MAJOR_VER;
     g_elog->container_ver_minor = EVTLOG_CNTNR_MINOR_VER;
@@ -362,7 +362,7 @@ bool evtlog_append_tpm12(uint8_t pcr, tb_hash_t *hash, uint32_t type)
 
     next->pcr_index = pcr;
     next->type = type;
-    memcpy(next->digest, hash, sizeof(next->digest));
+    tb_memcpy(next->digest, hash, sizeof(next->digest));
     next->data_size = 0;
 
     g_elog->next_event_offset += sizeof(*next) + next->data_size;
@@ -436,7 +436,7 @@ bool evtlog_append_tpm2_legacy(uint8_t pcr, uint16_t alg, tb_hash_t *hash, uint3
     next += sizeof(u32);
     *((u32 *)next) = type;
     next += sizeof(u32);
-    memcpy((uint8_t *)next, hash, hash_size);
+    tb_memcpy((uint8_t *)next, hash, hash_size);
     next += hash_size;
     *((u32 *)next) = 0;
     cur_desc->next_event_offset += 3*sizeof(uint32_t) + hash_size; 
@@ -489,7 +489,7 @@ bool evtlog_append_tpm2_tcg(uint8_t pcr, uint32_t type, hash_list_t *hl)
         *((uint16_t *)hash_entry) = hl->entries[i].alg; // TPMT_HA_1.hash_alg
         hash_entry += sizeof(uint16_t);
         hash_size = get_hash_size(hl->entries[i].alg);  // already checked above
-        memcpy(hash_entry, &(hl->entries[i].hash), hash_size);
+        tb_memcpy(hash_entry, &(hl->entries[i].hash), hash_size);
         hash_entry += hash_size;
     }
 
@@ -550,7 +550,7 @@ static txt_heap_t *init_txt_heap(void *ptab_base, acm_hdr_t *sinit, loader_ctx *
     os_mle_data_t *os_mle_data = get_os_mle_data_start(txt_heap);
     size = (uint64_t *)((uint32_t)os_mle_data - sizeof(uint64_t));
     *size = sizeof(*os_mle_data) + sizeof(uint64_t);
-    memset(os_mle_data, 0, sizeof(*os_mle_data));
+    tb_memset(os_mle_data, 0, sizeof(*os_mle_data));
     os_mle_data->version = 3;
     os_mle_data->lctx_addr = lctx->addr;
     os_mle_data->saved_misc_enable_msr = rdmsr(MSR_IA32_MISC_ENABLE);
@@ -571,7 +571,7 @@ static txt_heap_t *init_txt_heap(void *ptab_base, acm_hdr_t *sinit, loader_ctx *
     os_sinit_data_t *os_sinit_data = get_os_sinit_data_start(txt_heap);
     size = (uint64_t *)((uint32_t)os_sinit_data - sizeof(uint64_t));
     *size = calc_os_sinit_data_size(version);
-    memset(os_sinit_data, 0, *size);
+    tb_memset(os_sinit_data, 0, *size);
     os_sinit_data->version = version;
 
     /* this is phys addr */
@@ -599,7 +599,7 @@ static txt_heap_t *init_txt_heap(void *ptab_base, acm_hdr_t *sinit, loader_ctx *
                    lcp_size);
             return NULL;
         }
-        memcpy(os_mle_data->lcp_po_data, lcp_base, lcp_size);
+        tb_memcpy(os_mle_data->lcp_po_data, lcp_base, lcp_size);
         os_sinit_data->lcp_po_base = (unsigned long)&os_mle_data->lcp_po_data;
         os_sinit_data->lcp_po_size = lcp_size;
     }
@@ -640,7 +640,7 @@ static txt_heap_t *init_txt_heap(void *ptab_base, acm_hdr_t *sinit, loader_ctx *
                 os_sinit_data->efi_rsdt_ptr = (uint64_t) rsdp->rsdp1.rsdt;
             } else {
                 /* rsdp */
-                memcpy((void *)&g_rsdp, rsdp, sizeof(struct acpi_rsdp));
+                tb_memcpy((void *)&g_rsdp, rsdp, sizeof(struct acpi_rsdp));
                 os_sinit_data->efi_rsdt_ptr = (uint64_t)((uint32_t)&g_rsdp);
             }
         } else {
@@ -1301,7 +1301,7 @@ bool get_parameters(getsec_parameters_t *params)
         return false;
     }
 
-    memset(params, 0, sizeof(*params));
+    tb_memset(params, 0, sizeof(*params));
     params->acm_max_size = DEF_ACM_MAX_SIZE;
     params->acm_mem_types = DEF_ACM_MEM_TYPES;
     params->senter_controls = DEF_SENTER_CTRLS;

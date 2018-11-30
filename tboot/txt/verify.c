@@ -305,7 +305,7 @@ static bool verify_vtd_pmrs(txt_heap_t *txt_heap)
     }
 
     /* compare to current values */
-    memset(&tmp_os_sinit_data, 0, sizeof(tmp_os_sinit_data));
+    tb_memset(&tmp_os_sinit_data, 0, sizeof(tmp_os_sinit_data));
     tmp_os_sinit_data.version = os_sinit_data->version;
     set_vtd_pmrs(&tmp_os_sinit_data, min_lo_ram, max_lo_ram, min_hi_ram,
                  max_hi_ram);
@@ -434,19 +434,19 @@ bool verify_e820_map(sinit_mdr_t* mdrs_base, uint32_t num_mdrs)
 
     /* sort mdrs */
     for( i = 0; i < num_mdrs; i++ ) {
-        memcpy(&tmp_entry, &mdrs_base[i], sizeof(sinit_mdr_t));
+        tb_memcpy(&tmp_entry, &mdrs_base[i], sizeof(sinit_mdr_t));
         pos = i;
         for ( j = i + 1; j < num_mdrs; j++ ) {
             if ( ( tmp_entry.base > mdrs_base[j].base )
                  || (( tmp_entry.base == mdrs_base[j].base ) &&
                      ( tmp_entry.length > mdrs_base[j].length )) ) {
-                memcpy(&tmp_entry, &mdrs_base[j], sizeof(sinit_mdr_t));
+                tb_memcpy(&tmp_entry, &mdrs_base[j], sizeof(sinit_mdr_t));
                 pos = j;
             }
         }
         if ( pos > i ) {
-            memcpy(&mdrs_base[pos], &mdrs_base[i], sizeof(sinit_mdr_t));
-            memcpy(&mdrs_base[i], &tmp_entry, sizeof(sinit_mdr_t));
+            tb_memcpy(&mdrs_base[pos], &mdrs_base[i], sizeof(sinit_mdr_t));
+            tb_memcpy(&mdrs_base[i], &tmp_entry, sizeof(sinit_mdr_t));
         }
     }
 

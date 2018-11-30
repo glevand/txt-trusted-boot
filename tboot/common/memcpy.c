@@ -48,7 +48,7 @@ typedef	int	word;		/* "word" used for optimal copy speed */
  * This is the routine that actually implements
  * (the portable versions of) bcopy, memcpy, and memmove.
  */
-void *memcpy(void *dst0, const void *src0, size_t length)
+void *tb_memcpy(void *dst0, const void *src0, size_t length)
 {
 	char		*dst;
 	const char	*src;
@@ -57,6 +57,8 @@ void *memcpy(void *dst0, const void *src0, size_t length)
 	dst = dst0;
 	src = src0;
 
+	if (dst0 == NULL || src0 == NULL)
+		return NULL;
 	if (length == 0 || dst == src) {	/* nothing to do */
 		goto done;
 	}

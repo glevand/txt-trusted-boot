@@ -137,18 +137,18 @@ static void copy_s3_wakeup_entry(void)
     }
 
     /* backup target address space first */
-    memcpy(g_saved_s3_wakeup_page, (void *)TBOOT_S3_WAKEUP_ADDR,
+    tb_memcpy(g_saved_s3_wakeup_page, (void *)TBOOT_S3_WAKEUP_ADDR,
            s3_wakeup_end - s3_wakeup_16);
 
     /* copy s3 entry into target mem */
-    memcpy((void *)TBOOT_S3_WAKEUP_ADDR, s3_wakeup_16,
+    tb_memcpy((void *)TBOOT_S3_WAKEUP_ADDR, s3_wakeup_16,
            s3_wakeup_end - s3_wakeup_16);
 }
 
 static void restore_saved_s3_wakeup_page(void)
 {
     /* restore saved page */
-    memcpy((void *)TBOOT_S3_WAKEUP_ADDR, g_saved_s3_wakeup_page,
+    tb_memcpy((void *)TBOOT_S3_WAKEUP_ADDR, g_saved_s3_wakeup_page,
            s3_wakeup_end - s3_wakeup_16);
 }
 
@@ -233,7 +233,7 @@ static void post_launch(void)
 	/*
      * init MLE/kernel shared data page
      */
-    memset(&_tboot_shared, 0, PAGE_SIZE);
+    tb_memset(&_tboot_shared, 0, PAGE_SIZE);
     _tboot_shared.uuid = (uuid_t)TBOOT_SHARED_UUID;
     _tboot_shared.version = 6;
     _tboot_shared.log_addr = (uint32_t)g_log;
@@ -336,9 +336,9 @@ void begin_launch(void *addr, uint32_t magic)
            // cmdline = skip_filename(cmdline_orig);
             cmdline = cmdline_orig;
         }
-        memset(g_cmdline, '\0', sizeof(g_cmdline));
+        tb_memset(g_cmdline, '\0', sizeof(g_cmdline));
         if (cmdline)
-            strncpy(g_cmdline, cmdline, sizeof(g_cmdline)-1);
+            tb_strncpy(g_cmdline, cmdline, sizeof(g_cmdline)-1);
     }
 
     /* always parse cmdline */
@@ -503,9 +503,9 @@ static void shutdown_system(uint32_t shutdown_type)
     char type[32];
 
     if ( shutdown_type >= ARRAY_SIZE(types) )
-        snprintf(type, sizeof(type), "unknown: %u", shutdown_type);
+        tb_snprintf(type, sizeof(type), "unknown: %u", shutdown_type);
     else {
-        strncpy(type, types[shutdown_type], sizeof(type));
+        tb_strncpy(type, types[shutdown_type], sizeof(type));
         type[sizeof(type) - 1] = '\0';
     }
     printk(TBOOT_INFO"shutdown_system() called for shutdown_type: %s\n", type);
@@ -612,7 +612,7 @@ void shutdown(void)
                error */
         else
             /* wipe S3 key from memory now that it is sealed */
-            memset(_tboot_shared.s3_key, 0, sizeof(_tboot_shared.s3_key));
+            tb_memset(_tboot_shared.s3_key, 0, sizeof(_tboot_shared.s3_key));
     }
 
     /* cap dynamic PCRs extended as part of launch (17, 18, ...) */

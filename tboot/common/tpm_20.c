@@ -2240,7 +2240,7 @@ static bool tpm20_hash(struct tpm_if *ti, u32 locality, const u8 *data,
         }
 
         buffer.t.size = chunk_size;
-        memcpy( &(buffer.t.buffer[0]), &(data[i] ), chunk_size );
+        tb_memcpy( &(buffer.t.buffer[0]), &(data[i] ), chunk_size );
 
         update_in.buf = buffer;
         ret = _tpm20_sequence_update(locality, &update_in, &update_out);
@@ -2269,7 +2269,7 @@ static bool tpm20_hash(struct tpm_if *ti, u32 locality, const u8 *data,
 
     for ( j=0; j<hl->count; j++ ) {
         hl->entries[j].alg = complete_out.results.digests[j].hash_alg;
-        memcpy(&hl->entries[j].hash, &complete_out.results.digests[j].digest,
+        tb_memcpy(&hl->entries[j].hash, &complete_out.results.digests[j].digest,
                 sizeof(hl->entries[j].hash));
     }
 
@@ -2311,7 +2311,7 @@ static bool tpm20_nv_read(struct tpm_if *ti, uint32_t locality,
         return false;
     }
     *data_size = read_out.data.t.size;
-    memcpy(data, &read_out.data.t.buffer[0], *data_size);
+    tb_memcpy(data, &read_out.data.t.buffer[0], *data_size);
 
     return true;
 }
@@ -2334,7 +2334,7 @@ static bool tpm20_nv_write(struct tpm_if *ti, uint32_t locality,
     write_in.sessions.sessions[0] = pw_session;
     write_in.offset = offset;
     write_in.data.t.size = data_size;
-    memcpy(&write_in.data.t.buffer[0], data, data_size);
+    tb_memcpy(&write_in.data.t.buffer[0], data, data_size);
 
     ret = _tpm20_nv_write(locality, &write_in, &write_out);
     if ( ret != TPM_RC_SUCCESS ) {
@@ -2415,7 +2415,7 @@ static bool tpm20_seal(struct tpm_if *ti, uint32_t locality,
     COMPILE_TIME_ASSERT( sizeof(auth_str) - 1 <=
             sizeof(create_in.sensitive.t.sensitive.user_auth.t.buffer) );
     create_in.sensitive.t.sensitive.user_auth.t.size = sizeof(auth_str) - 1;
-    memcpy(&(create_in.sensitive.t.sensitive.user_auth.t.buffer[0]),
+    tb_memcpy(&(create_in.sensitive.t.sensitive.user_auth.t.buffer[0]),
             auth_str, sizeof(auth_str)-1);
     if ( in_data_size >
             sizeof(create_in.sensitive.t.sensitive.data.t.buffer) ) {
@@ -2426,12 +2426,12 @@ static bool tpm20_seal(struct tpm_if *ti, uint32_t locality,
         return false;
     }
     create_in.sensitive.t.sensitive.data.t.size = in_data_size;
-    memcpy(&(create_in.sensitive.t.sensitive.data.t.buffer[0]),
+    tb_memcpy(&(create_in.sensitive.t.sensitive.data.t.buffer[0]),
             in_data, in_data_size); 
 
     create_in.outside_info.t.size = 0;
     create_in.creation_pcr.count = 0;
-    memset(&create_out, 0, sizeof(create_out));
+    tb_memset(&create_out, 0, sizeof(create_out));
 
     ret = _tpm20_create(locality, &create_in, &create_out);
     if ( ret != TPM_RC_SUCCESS ) {
@@ -2440,7 +2440,7 @@ static bool tpm20_seal(struct tpm_if *ti, uint32_t locality,
         return false;
     }
     *sealed_data_size = sizeof(create_out);
-    memcpy(sealed_data, &create_out, *sealed_data_size); 
+    tb_memcpy(sealed_data, &create_out, *sealed_data_size); 
 
     return true;
 }
@@ -2479,7 +2479,7 @@ static bool tpm20_unseal(struct tpm_if *ti, uint32_t locality,
     unseal_in.sessions.num_sessions = 1;
     unseal_in.sessions.sessions[0] = pw_session;
     unseal_in.sessions.sessions[0].hmac.t.size = sizeof(auth_str) - 1;
-    memcpy(&(unseal_in.sessions.sessions[0].hmac.t.buffer[0]),
+    tb_memcpy(&(unseal_in.sessions.sessions[0].hmac.t.buffer[0]),
             auth_str, sizeof(auth_str)-1);
     unseal_in.item_handle = load_out.obj_handle;
 
@@ -2491,7 +2491,7 @@ static bool tpm20_unseal(struct tpm_if *ti, uint32_t locality,
     }
 
     *secret_size = unseal_out.data.t.size;
-    memcpy(secret, &(unseal_out.data.t.buffer[0]), *secret_size);
+    tb_memcpy(secret, &(unseal_out.data.t.buffer[0]), *secret_size);
 
     return true;
 }
@@ -2529,7 +2529,7 @@ static bool tpm20_get_random(struct tpm_if *ti, uint32_t locality,
 
     out_size = random_out.random_bytes.t.size;
     if (out_size > 0)
-        memcpy(random_data, &(random_out.random_bytes.t.buffer[0]), out_size);
+        tb_memcpy(random_data, &(random_out.random_bytes.t.buffer[0]), out_size);
     *data_size = out_size;
 
     /* if TPM doesn't return all requested random bytes, try one more time */
@@ -2552,7 +2552,7 @@ static bool tpm20_get_random(struct tpm_if *ti, uint32_t locality,
 
             out_size = random_out.random_bytes.t.size;
             if (out_size > 0)
-                memcpy(random_data+*data_size, 
+                tb_memcpy(random_data+*data_size, 
                         &(random_out.random_bytes.t.buffer[0]), out_size);
             *data_size += out_size;
         }
@@ -2603,7 +2603,7 @@ static bool tpm20_cap_pcrs(struct tpm_if *ti, u32 locality, int pcr)
 
     /* also cap every dynamic PCR we extended (only once) */
     /* don't cap static PCRs since then they would be wrong after S3 resume */
-    memset(&was_capped, true, TPM_PCR_RESETABLE_MIN*sizeof(bool));
+    tb_memset(&was_capped, true, TPM_PCR_RESETABLE_MIN*sizeof(bool));
     for ( int i = 0; i < g_pre_k_s3_state.num_vl_entries; i++ ) {
         if ( !was_capped[g_pre_k_s3_state.vl_entries[i].pcr] ) {
             tpm20_pcr_extend(ti, locality, g_pre_k_s3_state.vl_entries[i].pcr, &cap_val);
@@ -2646,7 +2646,7 @@ static bool tpm20_context_save(struct tpm_if *ti, u32 locality, TPM_HANDLE handl
     }
     else 
 	 printk(TBOOT_WARN"TPM: tpm2 context save successful, return value = %08X\n", ret);
-    memcpy((tpm_contextsave_out *)context_saved, &out, sizeof(tpm_contextsave_out));
+    tb_memcpy((tpm_contextsave_out *)context_saved, &out, sizeof(tpm_contextsave_out));
     return true;
 }	
 
@@ -2659,7 +2659,7 @@ static bool tpm20_context_load(struct tpm_if *ti, u32 locality, void  *context_s
     if ( ti == NULL || locality >= TPM_NR_LOCALITIES )
         return false;
 	
-    memcpy(&in, (tpm_contextsave_out *)context_saved, sizeof(tpm_contextsave_out));
+    tb_memcpy(&in, (tpm_contextsave_out *)context_saved, sizeof(tpm_contextsave_out));
 
     ret = _tpm20_context_load(locality, &in, &out);
     if ( ret != TPM_RC_SUCCESS ) {

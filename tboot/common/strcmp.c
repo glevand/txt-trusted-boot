@@ -38,9 +38,13 @@
 /*
  * Compare strings.
  */
-int strcmp(s1, s2)
+int tb_strcmp(s1, s2)
 	register const char *s1, *s2;
 {
+	if (s1 == NULL || s2 == NULL)
+		return(-1);
+	if (s1 == s2)
+		return(0);
 	while (*s1 == *s2++)
 		if (*s1++ == 0)
 			return (0);

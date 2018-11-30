@@ -75,7 +75,7 @@ static uint64_t *get_pde(unsigned long virt)
         pdptr_tab_offset = pdptr_table_offset(virt);
 
         p = pd_table + pdptr_tab_offset * TB_L1_PAGETABLE_ENTRIES;
-        memset(p, 0, sizeof(uint64_t) * TB_L1_PAGETABLE_ENTRIES);
+        tb_memset(p, 0, sizeof(uint64_t) * TB_L1_PAGETABLE_ENTRIES);
         *ppdptre = MAKE_TB_PDPTE((unsigned long)p);
     }
 
@@ -173,8 +173,8 @@ static unsigned long build_directmap_pagetable(void)
     uint64_t *ppdptre;
     unsigned long tboot_spfn, tboot_epfn;
 
-    memset(pdptr_table, 0, sizeof(pdptr_table));
-    memset(pd_table, 0, sizeof(pd_table));
+    tb_memset(pdptr_table, 0, sizeof(pdptr_table));
+    tb_memset(pd_table, 0, sizeof(pd_table));
 
     for ( i = 0; i < ARRAY_SIZE(pd_table)/TB_L1_PAGETABLE_ENTRIES; i++ ) {
         ppdptre = &pdptr_table[i];
