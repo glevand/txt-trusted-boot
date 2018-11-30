@@ -341,9 +341,15 @@ static bool rsa_sign_list_data(lcp_policy_list_t2 *pollist, const char *privkey_
 
         RSA_free(privkey);
 
+        uint8_t *plsigblock = get_tpm20_sig_block(pollist);
+        if ( plsigblock == NULL ) {
+            ERROR("Error: list sig block not found\n");
+            return false;
+        }
+
         /* sigblock is big-endian and policy needs little-endian, so reverse */
         for ( unsigned int i = 0; i < sig->rsa_signature.pubkey_size; i++ )
-            *(get_tpm20_sig_block(pollist) + i) = *(sigblock + (sig->rsa_signature.pubkey_size - i - 1));
+            *(plsigblock + i) = *(sigblock + (sig->rsa_signature.pubkey_size - i - 1));
 
         if ( verbose ) {
             LOG("signature:\n");
@@ -407,12 +413,19 @@ static bool ecdsa_sign_tpm20_list_data(lcp_policy_list_t2 *pollist, EC_KEY *ecke
         unsigned char key_s[BN_s_size];
         BN_bn2bin(r,key_r);
         BN_bn2bin(s,key_s);
+
+        uint8_t *plsigblock = get_tpm20_sig_block(pollist);
+        if ( plsigblock == NULL ) {
+            ERROR("Error: list sig block not found\n");
+            return false;
+        }
+
         for ( unsigned int i = 0; i < BN_r_size; i++ ) {
-            *(get_tpm20_sig_block(pollist) + i) = *(key_r + (BN_r_size -i - 1));
+            *(plsigblock + i) = *(key_r + (BN_r_size -i - 1));
         }
 
         for ( unsigned int i = 0; i < BN_s_size; i++ ) {
-            *(get_tpm20_sig_block(pollist) + BN_r_size + i) = *(key_s + (BN_s_size -i - 1));
+            *(plsigblock + BN_r_size + i) = *(key_s + (BN_s_size -i - 1));
         }
 
         if ( verbose ) {
@@ -653,9 +666,17 @@ static int addsig(void)
     }
     LOG("signature file verified\n");
 
+    uint8_t *plsigblock = get_tpm20_sig_block(&(pollist->tpm20_policy_list));
+    if ( plsigblock == NULL ) {
+        ERROR("Error: list sig block not found\n");
+        free(pollist);
+        free(data);
+        return 1;
+    }
+
     /* data is big-endian and policy needs little-endian, so reverse */
     for ( unsigned int i = 0; i < sig->rsa_signature.pubkey_size; i++ )
-        *(get_tpm20_sig_block(&(pollist->tpm20_policy_list)) + i) =
+        *(plsigblock + i) =
                 *(data + (sig->rsa_signature.pubkey_size - i - 1));
 
     if ( verbose ) {
