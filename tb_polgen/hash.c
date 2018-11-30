@@ -39,6 +39,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <openssl/evp.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -55,13 +56,14 @@
 bool are_hashes_equal(const tb_hash_t *hash1, const tb_hash_t *hash2,
 		      uint16_t hash_alg)
 {
+    int diff;
     if ( ( hash1 == NULL ) || ( hash2 == NULL ) ) {
         error_msg("Error: hash pointer is zero.\n");
         return false;
     }
 
     if ( hash_alg == TB_HALG_SHA1 )
-        return (memcmp(hash1, hash2, SHA1_LENGTH) == 0);
+        return (memcmp_s(hash1, SHA1_LENGTH, hash2, SHA1_LENGTH, &diff) == 0 && diff == 0);
     else {
         error_msg("unsupported hash alg (%d)\n", hash_alg);
         return false;
@@ -118,8 +120,9 @@ bool extend_hash(tb_hash_t *hash1, const tb_hash_t *hash2, uint16_t hash_alg)
         EVP_MD_CTX *ctx = EVP_MD_CTX_create();
         const EVP_MD *md;
 
-        memcpy(buf, &(hash1->sha1), sizeof(hash1->sha1));
-        memcpy(buf + sizeof(hash1->sha1), &(hash2->sha1), sizeof(hash1->sha1));
+        memcpy_s(buf, sizeof(buf), &(hash1->sha1), sizeof(hash1->sha1));
+        memcpy_s(buf + sizeof(hash1->sha1), sizeof(buf) - sizeof(hash1->sha1),
+                 &(hash2->sha1), sizeof(hash1->sha1));
         md = EVP_sha1();
         EVP_DigestInit(ctx, md);
         EVP_DigestUpdate(ctx, buf, 2*sizeof(hash1->sha1));
@@ -160,7 +163,7 @@ void copy_hash(tb_hash_t *dest_hash, const tb_hash_t *src_hash,
     }
 
     if ( hash_alg == TB_HALG_SHA1 )
-        memcpy(dest_hash, src_hash, SHA1_LENGTH);
+        memcpy_s(dest_hash, SHA1_LENGTH, src_hash, SHA1_LENGTH);
     else
         error_msg("unsupported hash alg (%d)\n", hash_alg);
 }

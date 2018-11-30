@@ -47,6 +47,8 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/bn.h>
+#include <safe_lib.h>
+#include <snprintf_s.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -86,10 +88,8 @@ void DISPLAY(const char *fmt, ...)
 
 size_t strlcpy(char *dst, const char *src, size_t siz)
 {
-    strncpy(dst, src, siz-1);
-    if ( siz != 0 )
-        *(dst + siz-1) = '\0';
-    return strlen(src);
+    strcpy_s(dst, siz, src);
+    return strnlen_s(dst, siz);
 }
 
 void print_hex(const char *prefix, const void *data, size_t n)
@@ -271,7 +271,7 @@ const char *hash_alg_to_str(uint16_t alg)
     case TPM_ALG_SM3_256:
         return "sm3";
     default:
-        snprintf(buf, sizeof(buf), "unknown (%u)", alg);
+        snprintf_s_i(buf, sizeof(buf), "unknown (%u)", alg);
         return buf;
     }
 }
@@ -287,7 +287,7 @@ const char *sig_alg_to_str(uint16_t alg)
     case TPM_ALG_SM2:
         return "sm2";
     default:
-        snprintf(buf, sizeof(buf), "unknown (%u)", alg);
+        snprintf_s_i(buf, sizeof(buf), "unknown (%u)", alg);
         return buf;
     }
 }
@@ -449,7 +449,7 @@ bool verify_signature(const uint8_t *data, size_t data_size,
 
     /* uses fixed exponent (LCP_SIG_EXPONENT) */
     char exp[32];
-    snprintf(exp, sizeof(exp), "%u", LCP_SIG_EXPONENT);
+    snprintf_s_i(exp, sizeof(exp), "%u", LCP_SIG_EXPONENT);
     BN_dec2bn(&exponent, exp);
     /* OpenSSL Version 1.1.0 and later don't allow direct access to RSA 
        stuct */ 

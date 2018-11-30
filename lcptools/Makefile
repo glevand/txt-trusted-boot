@@ -79,10 +79,10 @@ UTIL_OBJS := lcptools.o lcputils.o
 LIBS += -lcrypto -ltspi -lz
 
 $(TPMNV_TARGETS) : tpmnv_% : %.o $(UTIL_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) $(ROOTDIR)/safestringlib/libsafestring.a -o $@
 
 $(LCP_TARGETS) : lcp_% : %.o $(UTIL_OBJS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) $(ROOTDIR)/safestringlib/libsafestring.a -o $@
 
 
 #

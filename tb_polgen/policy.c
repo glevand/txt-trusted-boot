@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -99,7 +100,7 @@ bool read_policy_file(const char *policy_filename, bool *file_exists)
         *file_exists = true;
 
     /* clear for good measure */
-    memset(_policy_buf, 0, sizeof(_policy_buf));
+    memset_s(_policy_buf, sizeof(_policy_buf), 0);
 
     size_t read_cnt = fread(_policy_buf, 1, sizeof(_policy_buf), f);
     if ( ferror(f) ) {

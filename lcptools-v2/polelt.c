@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -102,8 +103,9 @@ void display_policy_element(const char *prefix,
     if ( brief )
         return;
 
-    char new_prefix[strlen(prefix)+8];
-    snprintf(new_prefix, sizeof(new_prefix), "%s    ", prefix);
+    char new_prefix[strnlen_s(prefix, 20)+8];
+    strcpy_s(new_prefix, sizeof(new_prefix), prefix);
+    strcat_s(new_prefix, sizeof(new_prefix), "    ");
     DISPLAY("%s data:\n", prefix);
     if ( plugin == NULL )
         print_hex(new_prefix, elt->data, elt->size - sizeof(*elt));

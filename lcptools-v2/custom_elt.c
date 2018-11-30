@@ -42,6 +42,7 @@
 #include <ctype.h>
 #define _GNU_SOURCE
 #include <getopt.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -208,12 +209,12 @@ static lcp_policy_element_t *create(void)
         return NULL;
     }
 
-    memset(elt, 0, sizeof(*elt) + data_size);
+    memset_s(elt, sizeof(*elt) + data_size, 0);
     elt->size = sizeof(*elt) + data_size;
 
     lcp_custom_element_t2 *custom = (lcp_custom_element_t2 *)&elt->data;
     custom->uuid = uuid;
-    memcpy(custom->data, data, data_len);
+    memcpy_s(custom->data, data_len, data, data_len);
 
     free(data);
     data = NULL;

@@ -25,7 +25,7 @@ lcp2 : $(LCP2_TARGETS)
 # universal rules
 #
 
-build : $(TPMNV_TARGETS) $(LCP2_TARGETS)
+build : $(LCP2_TARGETS)
 
 
 dist : install
@@ -46,19 +46,12 @@ $(INST_TARGET) : $(notdir $(INST_TARGET))
 
 
 clean :
-	rm -f *~ *.a *.so *.o *.rpm $(DEP_FILES) $(LCP2_TARGETS) trousers_dep
+	rm -f *~ *.a *.so *.o *.rpm $(DEP_FILES) $(LCP2_TARGETS)
 
 mrproper : clean
 
 
 distclean : clean
-
-#
-# trousers
-#
-
-trousers_dep:
-	@printf "#include <trousers/tss.h>\n" | $(CC) -x c $(CFLAGS) $(LDFLAGS) $(LIBS) - -Wl,--defsym=main=0 -o $@ >/dev/null 2>&1 || (echo trousers-devel package is not installed && false)
 
 #
 # dependencies
@@ -73,20 +66,22 @@ POLELT_PLUGINS := mle_elt.o custom_elt.o sbios_elt.o stm_elt.o
 
 LCP2_LIB := liblcp.a
 
+LIBS += -lcrypto -llcp -lz $(ROOTDIR)/safestringlib/libsafestring.a
+
 $(LCP2_LIB) : pol.o poldata.o pollist2.o polelt.o lcputils.o hash.o pollist1.o
 	$(AR) rc $@ $^
 
 lcp2_crtpolelt : crtpolelt.o $(POLELT_PLUGINS) $(LCP2_LIB)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -lcrypto -llcp -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 
 lcp2_crtpollist : crtpollist.o $(POLELT_PLUGINS) $(LCP2_LIB)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -lcrypto -llcp -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 
 lcp2_crtpol : crtpol.o $(POLELT_PLUGINS) $(LCP2_LIB)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -lcrypto -llcp -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 
 lcp2_mlehash : mlehash.o $(LCP2_LIB)
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ -lcrypto -lz -o $@
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
 #
@@ -97,5 +92,5 @@ HDRS := $(wildcard $(ROOTDIR)/include/*.h) $(wildcard $(CURDIR)/*.h)
 
 BUILD_DEPS := $(ROOTDIR)/Config.mk $(CURDIR)/Makefile
 
-%.o : %.c $(HDRS) $(BUILD_DEPS) trousers_dep
+%.o : %.c $(HDRS) $(BUILD_DEPS)
 	$(CC) $(CFLAGS) -DNO_TBOOT_LOGLVL -c $< -o $@

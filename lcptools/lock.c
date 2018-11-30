@@ -91,7 +91,6 @@ parse_cmdline(int argc, const char * argv[])
 int
 main (int argc, char *argv[])
 {
-    char confirm_lock[4] = {0};
     char c;
     in_nv_definespace_t in_defspace;
     lcp_result_t ret_value = LCP_E_COMD_INTERNAL_ERR;
@@ -113,17 +112,13 @@ main (int argc, char *argv[])
      * Check whether force to lock.
      */
     if ( force == 0 ) {
-        int dummy;
         /*
          * If haven't input force to lock, reminder to confirm
          * whether lock or not.
          */
         do {
             log_info("Really want to lock TPM NV? (Y/N) ");
-            dummy = scanf("%3s", confirm_lock);
-            if ( dummy <= 0 )
-                return LCP_E_COMD_INTERNAL_ERR;
-            c = confirm_lock[0] | ' ';
+            c = getchar() | ' ';
         } while ( (c != 'n') && (c != 'y') );
         if ( c == 'n') {
             ret_value = LCP_SUCCESS;

@@ -43,7 +43,7 @@
 #include <string.h>
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
-
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/uuid.h"
 #include "../include/lcp2.h"
@@ -138,7 +138,7 @@ parse_cmdline(int argc, const char* argv[])
 
             case 'p':
                 password = optarg;
-                password_len = strlen(password);
+                password_len = strnlen_s(password, 4096);
                 break;
 
             case 'h':
@@ -152,7 +152,7 @@ parse_cmdline(int argc, const char* argv[])
 
             case 'a':
                 auth_value = optarg;
-                auth_length = strlen(auth_value);
+                auth_length = strnlen_s(auth_value, 4096);
                 break;
 
             case 'w':

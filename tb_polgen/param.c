@@ -41,6 +41,7 @@
 #include <string.h>
 #include <getopt.h>
 #include <errno.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -185,7 +186,7 @@ void print_params(param_data_t *params)
     info_msg("\t hash_type = %d\n", params->hash_type);
     info_msg("\t pos = %d\n", params->pos);
     info_msg("\t cmdline length = %lu\n",
-             (unsigned long int)strlen(params->cmdline));
+             (unsigned long int)strnlen_s(params->cmdline, sizeof(params->cmdline)));
     info_msg("\t cmdline = %s\n", params->cmdline);
     info_msg("\t image_file = %s\n", params->image_file);
     info_msg("\t elt_file = %s\n", params->elt_file);
@@ -203,7 +204,7 @@ static bool validate_params(param_data_t *params)
 
         case POLGEN_CMD_CREATE:
             /* these are required in all cases */
-            if ( strlen(params->policy_file) == 0 ) {
+            if ( strnlen_s(params->policy_file, sizeof(params->policy_file)) == 0 ) {
                 msg = "Missing policy file\n";
                 goto error;
             }
@@ -219,19 +220,19 @@ static bool validate_params(param_data_t *params)
 
         case POLGEN_CMD_ADD:
             /* these are required in all cases */
-            if ( strlen(params->policy_file) == 0 ) {
+            if ( strnlen_s(params->policy_file, sizeof(params->policy_file)) == 0 ) {
                 msg = "Missing policy file\n";
                 goto error;
             }
             /* if hash_type is not ANY then need an image file */
             if ( params->hash_type != TB_HTYPE_ANY &&
-                 strlen(params->image_file) == 0 ) {
+                 strnlen_s(params->image_file, sizeof(params->image_file)) == 0 ) {
                 msg = "Missing --image option\n";
                 goto error;
             }
             /* if hash_type is ANY then no need for an image file */
             if ( params->hash_type == TB_HTYPE_ANY &&
-                 strlen(params->image_file) != 0 ) {
+                 strnlen_s(params->image_file, sizeof(params->image_file)) != 0 ) {
                 msg = "Extra --image option\n";
                 goto error;
             }
@@ -254,7 +255,7 @@ static bool validate_params(param_data_t *params)
 
         case POLGEN_CMD_DEL:
             /* these are required in all cases */
-            if ( strlen(params->policy_file) == 0 ) {
+            if ( strnlen_s(params->policy_file, sizeof(params->policy_file)) == 0 ) {
                 msg = "Missing policy file\n";
                 goto error;
             }
@@ -267,18 +268,18 @@ static bool validate_params(param_data_t *params)
             return true;
 
         case POLGEN_CMD_UNWRAP:
-            if ( strlen(params->policy_file) == 0 ) {
+            if ( strnlen_s(params->policy_file, sizeof(params->policy_file)) == 0 ) {
                 msg = "Missing policy file\n";
                 goto error;
             }
-            if ( strlen(params->elt_file) == 0 ) {
+            if ( strnlen_s(params->elt_file, sizeof(params->elt_file)) == 0 ) {
                 msg = "Missing elt file\n";
                 goto error;
             }
             return true;
 
         case POLGEN_CMD_SHOW:
-            if ( strlen(params->policy_file) == 0 ) {
+            if ( strnlen_s(params->policy_file, sizeof(params->policy_file)) == 0 ) {
                 msg = "Missing policy file\n";
                 goto error;
             }
@@ -400,33 +401,29 @@ bool parse_input_params(int argc, char **argv, param_data_t *params)
                     error_msg("Misssing filename for --image option\n");
                     return false;
                 }
-                strncpy(params->image_file, optarg,
-                        sizeof(params->image_file));
-                params->image_file[sizeof(params->image_file)-1] = '\0';
+                strcpy_s(params->image_file, sizeof(params->image_file), optarg);
                 break;
             case 'l':                       /* --cmdline */
                 if ( optarg == NULL ) {
                     error_msg("Misssing string for --cmdline option\n");
                     return false;
                 }
-                if (strlen(optarg) > sizeof(params->cmdline) - 1) {
+                if (strnlen_s(optarg, sizeof(params->cmdline)) > sizeof(params->cmdline) - 1) {
                     error_msg("Command line length of %lu exceeds %d "
                               "character maximum\n", 
-                              (unsigned long int)strlen(optarg),
+                              (unsigned long int)strnlen_s(optarg, sizeof(params->cmdline)),
                               TBOOT_KERNEL_CMDLINE_SIZE-1);
                     return false;
                 }
                     
-                strncpy(params->cmdline, optarg, sizeof(params->cmdline));
-                params->cmdline[sizeof(params->cmdline)-1] = '\0';
+                strcpy_s(params->cmdline, sizeof(params->cmdline), optarg);
                 break;
             case 'e':                       /* --elt */
                 if ( optarg == NULL ) {
                     error_msg("Missing filename for --elt option\n");
                     return false;
                 }
-                strncpy(params->elt_file, optarg, sizeof(params->elt_file));
-                params->elt_file[sizeof(params->elt_file)-1] = '\0';
+                strcpy_s(params->elt_file, sizeof(params->elt_file), optarg);
                 break;
             default:
                 break;
@@ -439,8 +436,7 @@ bool parse_input_params(int argc, char **argv, param_data_t *params)
         return false;
     }
 
-    strncpy(params->policy_file, argv[optind], sizeof(params->policy_file));
-    params->policy_file[sizeof(params->policy_file)-1] = '\0';
+    strcpy_s(params->policy_file, sizeof(params->policy_file), argv[optind]);
 
     return validate_params(params);
 }

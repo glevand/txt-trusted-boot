@@ -90,6 +90,8 @@ LIBDIR := lib
 CFLAGS += -m32 -march=i686
 endif
 
+CFLAGS += -I$(ROOTDIR)/safestringlib/include
+
 # common dummy rule to force execution
 .PHONY: FORCE
 FORCE :

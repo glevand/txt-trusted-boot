@@ -47,6 +47,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <safe_lib.h>
 
 #define printk   printf
 #include "../include/config.h"
@@ -251,12 +252,10 @@ static void display_tboot_log(void *log_base)
             /* print out the uncompressed log */
             for ( int curr_pos = 0; curr_pos < length; curr_pos += sizeof(buf)-1 ) {
                 if ( length - curr_pos >= (int)sizeof(buf) - 1 ) {
-                    strncpy(buf, out + curr_pos, sizeof(buf)-1);
-                    buf[sizeof(buf)-1] = '\0';
+                    strncpy_s(buf, sizeof(buf), out + curr_pos, sizeof(buf)-1);
                 }
                 else {
-                    strncpy(buf, out + curr_pos, length - curr_pos);
-                    buf[length - curr_pos] = '\0';
+                    strncpy_s(buf, sizeof(buf), out + curr_pos, length - curr_pos);
                 }
                 printf("%s", buf);
             }
@@ -264,8 +263,7 @@ static void display_tboot_log(void *log_base)
     } 
 
     for ( unsigned int curr_pos = log->zip_pos[log->zip_count]; curr_pos < log->curr_pos; curr_pos += sizeof(buf)-1 ) {
-        strncpy(buf, log_buf + curr_pos, sizeof(buf)-1);
-        buf[sizeof(buf)-1] = '\0';
+        strncpy_s(buf, sizeof(buf), log_buf + curr_pos, sizeof(buf)-1);
         printf("%s", buf);
     }
     printf("\n");

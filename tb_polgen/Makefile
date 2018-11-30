@@ -15,7 +15,7 @@ include $(ROOTDIR)/Config.mk
 TARGET = tb_polgen
 
 # libraries
-LIBS += -lcrypto -lz
+LIBS += -lcrypto -lz $(ROOTDIR)/safestringlib/libsafestring.a
 
 
 #

@@ -43,6 +43,7 @@
 #include <memory.h>
 #include <sys/stat.h>
 #include <openssl/evp.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -224,8 +225,8 @@ static bool expand_elf_image(const elf_header_t *elf, void *base, size_t size)
                 LOG("expanded image exceeded allocated size\n");
                 return false;
             }
-            memcpy(base, (void *)elf + ph->p_offset, ph->p_filesz);
-            memset(base + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+            memcpy_s(base, size, (void *)elf + ph->p_offset, ph->p_filesz);
+            memset_s(base + ph->p_filesz, ph->p_memsz - ph->p_filesz, 0);
             base += ph->p_memsz;
             size -= ph->p_memsz;
         }
@@ -324,7 +325,7 @@ static bool read_mle_file(const char *filename, void **buffer, size_t *length)
     *buffer = malloc(*length);
     if ( *buffer == NULL )
         goto error;
-    memset(*buffer, 0, *length);
+    memset_s(*buffer, *length, 0);
     if ( fread(*buffer, 1, *length, fdecompressed) != *length )
         goto error;
     fclose(fdecompressed);
@@ -390,12 +391,12 @@ int main(int argc, char* argv[])
             break;
 
         case 'c':
-            cmdline = malloc(strlen(optarg) + 1);
+            cmdline = malloc(strnlen_s(optarg, 4096) + 1);
             if ( cmdline == NULL ) {
                 printf("Out of memory\n");
                 return 1;
             }
-            strcpy(cmdline, optarg);
+            strcpy_s(cmdline, strnlen_s(optarg, 4096) + 1, optarg);
             break;
 
         case 'a':
@@ -468,10 +469,11 @@ int main(int argc, char* argv[])
            command line param to it */
         if ( mle_hdr->cmdline_end_off > mle_hdr->cmdline_start_off &&
                 cmdline != NULL ) {
-            memset(exp_start + mle_hdr->cmdline_start_off, '\0',
-                    mle_hdr->cmdline_end_off - mle_hdr->cmdline_start_off);
-            strncpy(exp_start + mle_hdr->cmdline_start_off, cmdline,
-                    mle_hdr->cmdline_end_off - mle_hdr->cmdline_start_off - 1);
+            memset_s(exp_start + mle_hdr->cmdline_start_off,
+                    mle_hdr->cmdline_end_off - mle_hdr->cmdline_start_off, '\0');
+            strcpy_s(exp_start + mle_hdr->cmdline_start_off,
+                     mle_hdr->cmdline_end_off - mle_hdr->cmdline_start_off,
+                     cmdline);
         }
 
         /* hash the MLE portion of the image */

@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -184,8 +185,9 @@ void display_tpm12_policy_list(const char *prefix, const lcp_policy_list_t *poll
     DISPLAY("%s policy_elements_size: 0x%x (%u)\n", prefix,
             pollist->policy_elements_size, pollist->policy_elements_size);
 
-    char new_prefix[strlen(prefix)+8];
-    snprintf(new_prefix, sizeof(new_prefix), "%s    ", prefix);
+    char new_prefix[strnlen_s(prefix, 20)+8];
+    strcpy_s(new_prefix, sizeof(new_prefix), prefix);
+    strcat_s(new_prefix, sizeof(new_prefix), "    ");
     unsigned int i = 0;
     size_t elts_size = pollist->policy_elements_size;
     const lcp_policy_element_t *elt = pollist->policy_elements;
@@ -244,7 +246,7 @@ lcp_policy_list_t *add_tpm12_policy_element(lcp_policy_list_t *pollist,
     memmove((void *)&new_pollist->policy_elements + elt->size,
             &new_pollist->policy_elements,
             old_size - offsetof(lcp_policy_list_t, policy_elements));
-    memcpy(&new_pollist->policy_elements, elt, elt->size);
+    memcpy_s(&new_pollist->policy_elements, elt->size, elt, elt->size);
     new_pollist->policy_elements_size += elt->size;
 
     return new_pollist;
@@ -290,8 +292,9 @@ bool verify_tpm12_pollist_sig(const lcp_policy_list_t *pollist)
 void display_tpm12_signature(const char *prefix, const lcp_signature_t *sig,
         bool brief)
 {
-    char new_prefix[strlen(prefix)+8];
-    snprintf(new_prefix, sizeof(new_prefix), "%s\t", prefix);
+    char new_prefix[strnlen_s(prefix, 20)+8];
+    strcpy_s(new_prefix, sizeof(new_prefix), prefix);
+    strcat_s(new_prefix, sizeof(new_prefix), "\t");
 
     DISPLAY("%s revocation_counter: 0x%x (%u)\n", prefix,
             sig->revocation_counter, sig->revocation_counter);
@@ -332,7 +335,7 @@ lcp_policy_list_t *add_tpm12_signature(lcp_policy_list_t *pollist,
     lcp_signature_t *curr_sig = get_tpm12_signature(new_pollist);
     if ( curr_sig != NULL )
         sig_begin = (void *)curr_sig - (void *)new_pollist;
-    memcpy((void *)new_pollist + sig_begin, sig, sig_size);
+    memcpy_s((void *)new_pollist + sig_begin, sig_size, sig, sig_size);
 
     return new_pollist;
 }

@@ -49,6 +49,7 @@
 #include <openssl/bn.h>
 #include <openssl/ecdsa.h>
 #include <openssl/ec.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -161,7 +162,7 @@ static lcp_signature_t2 *read_rsa_pubkey_file(const char *file)
         return NULL;
     }
     const BIGNUM *modulus = NULL;
-    memset(sig, 0, sizeof(lcp_rsa_signature_t) + 2*keysize);
+    memset_s(sig, sizeof(lcp_rsa_signature_t) + 2*keysize, 0);
     sig->rsa_signature.pubkey_size = keysize;
 
     /* OpenSSL Version 1.1.0 and later don't allow direct access to RSA 
@@ -206,7 +207,7 @@ static lcp_signature_t2 *read_ecdsa_pubkey(const EC_POINT *pubkey, const EC_GROU
         return NULL;
     }
 
-    memset(sig, 0, sizeof(lcp_ecc_signature_t) + 2*keysize);
+    memset_s(sig, sizeof(lcp_ecc_signature_t) + 2*keysize, 0);
     sig->ecc_signature.pubkey_size = keysize;
     unsigned int BN_X_size = BN_num_bytes(x);
     unsigned int BN_Y_size = BN_num_bytes(y); 
@@ -468,7 +469,7 @@ static int sign(void)
         return 1;
 
     uint16_t  version ;
-    memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+    memcpy_s((void*)&version, sizeof(uint16_t), (const void *)pollist, sizeof(uint16_t));
     if ( version != LCP_TPM20_POLICY_LIST_VERSION ) {
         free(pollist);
         return 1;
@@ -510,7 +511,7 @@ static int sign(void)
                 free(pollist);
                 return 1;
             }
-            memset(sigblock, 0, sig->rsa_signature.pubkey_size);
+            memset_s(sigblock, sig->rsa_signature.pubkey_size, 0);
         }
         else {
             if ( !rsa_sign_list_data(&(pollist->tpm20_policy_list), privkey_file) ) {
@@ -567,7 +568,7 @@ static int sign(void)
                 free(pollist);
                 return 1;
             }
-            memset(sigblock, 0, sig->ecc_signature.pubkey_size);
+            memset_s(sigblock, sig->ecc_signature.pubkey_size, 0);
         }
         else {
             if ( !ecdsa_sign_tpm20_list_data(&(pollist->tpm20_policy_list), eckey) ) {
@@ -604,7 +605,7 @@ static int addsig(void)
         return 1;
 
     uint16_t  version ;
-    memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+    memcpy_s((void*)&version, sizeof(uint16_t), (const void *)pollist, sizeof(uint16_t));
     if (version != LCP_TPM20_POLICY_LIST_VERSION )
         return 1;
 
@@ -681,7 +682,7 @@ static int show(void)
         return 1;
 
     uint16_t  version ;
-    memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+    memcpy_s((void*)&version, sizeof(uint16_t), (const void *)pollist, sizeof(uint16_t));
     if (version != LCP_TPM20_POLICY_LIST_VERSION ) {
         free(pollist);
         return 1;

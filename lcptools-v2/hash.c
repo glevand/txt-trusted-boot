@@ -39,6 +39,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <openssl/evp.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -52,19 +53,20 @@
 bool are_hashes_equal(const tb_hash_t *hash1, const tb_hash_t *hash2,
 		      uint16_t hash_alg)
 {
+    int diff;
     if ( ( hash1 == NULL ) || ( hash2 == NULL ) )
         return false;
 
     if ( hash_alg == TB_HALG_SHA1 )
-        return (memcmp(hash1, hash2, SHA1_LENGTH) == 0);
+        return (memcmp_s(hash1, SHA1_LENGTH, hash2, SHA1_LENGTH, &diff) == 0 && diff == 0);
     else if ( hash_alg == TB_HALG_SHA256 )
-        return (memcmp(hash1, hash2, SHA256_LENGTH) == 0);
+        return (memcmp_s(hash1, SHA256_LENGTH, hash2, SHA256_LENGTH, &diff) == 0 && diff == 0);
     else if ( hash_alg == TB_HALG_SM3 )
-        return (memcmp(hash1, hash2, SM3_LENGTH) == 0);
+        return (memcmp_s(hash1, SM3_LENGTH, hash2, SM3_LENGTH, &diff) == 0 && diff == 0);
     else if ( hash_alg == TB_HALG_SHA384 )
-        return (memcmp(hash1, hash2, SHA384_LENGTH) == 0);
+        return (memcmp_s(hash1, SHA384_LENGTH, hash2, SHA384_LENGTH, &diff) == 0 && diff == 0);
     else if ( hash_alg == TB_HALG_SHA512 )
-        return (memcmp(hash1, hash2, SHA512_LENGTH) == 0);
+        return (memcmp_s(hash1, SHA512_LENGTH, hash2, SHA512_LENGTH, &diff) == 0 && diff == 0);
     else
         return false;
 }
@@ -135,8 +137,9 @@ bool extend_hash(tb_hash_t *hash1, const tb_hash_t *hash2, uint16_t hash_alg)
         EVP_MD_CTX *ctx = EVP_MD_CTX_create();
         const EVP_MD *md;
 
-        memcpy(buf, &(hash1->sha1), sizeof(hash1->sha1));
-        memcpy(buf + sizeof(hash1->sha1), &(hash2->sha1), sizeof(hash1->sha1));
+        memcpy_s(buf, sizeof(buf), &(hash1->sha1), sizeof(hash1->sha1));
+        memcpy_s(buf + sizeof(hash1->sha1), sizeof(buf) - sizeof(hash1->sha1),
+                 &(hash2->sha1), sizeof(hash1->sha1));
         md = EVP_sha1();
         EVP_DigestInit(ctx, md);
         EVP_DigestUpdate(ctx, buf, 2*sizeof(hash1->sha1));
@@ -180,7 +183,7 @@ void copy_hash(tb_hash_t *dest_hash, const tb_hash_t *src_hash,
         return;
 
     if ( hash_alg == TB_HALG_SHA1 )
-        memcpy(dest_hash, src_hash, SHA1_LENGTH);
+        memcpy_s(dest_hash, SHA1_LENGTH, src_hash, SHA1_LENGTH);
     else
         return;
 }

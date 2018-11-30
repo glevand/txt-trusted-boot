@@ -42,6 +42,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <errno.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -115,7 +116,7 @@ static void add_plugins(void)
             ERROR("Error: too many plugin options\n");
 
         /* copy help text */
-        strncat(help, plugin->help_txt, MAX_HELP_TEXT - strlen(help) - 1);
+        strcat_s(help, sizeof(help), plugin->help_txt);
     }
 }
 

@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -65,7 +66,7 @@ lcp_list_t *read_policy_list_file(const char *file, bool fail_ok,
         return NULL;
 
     uint16_t  version ;
-    memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+    memcpy_s((void*)&version,sizeof(version),(const void *)pollist,sizeof(uint16_t));
     if ( version == LCP_TPM12_POLICY_LIST_VERSION ){
         LOG("read_policy_list_file: version=0x0100\n");
         bool no_sigblock;
@@ -91,7 +92,7 @@ lcp_list_t *read_policy_list_file(const char *file, bool fail_ok,
             pollist = realloc(pollist, len + keysize);
             if ( pollist == NULL )
                 return NULL;
-            memset((void *)pollist + len, 0, keysize);
+            memset_s((void *)pollist + len, keysize, 0);
         }
         *no_sigblock_ok = no_sigblock;
         LOG("read policy list file succeed!\n");
@@ -132,7 +133,7 @@ lcp_list_t *read_policy_list_file(const char *file, bool fail_ok,
 
             if ( pollist == NULL )
                 return NULL;
-            memset((void *)pollist + len, 0, keysize);
+            memset_s((void *)pollist + len, keysize, 0);
         }
         *no_sigblock_ok = no_sigblock;
 
@@ -297,8 +298,9 @@ void display_tpm20_policy_list(const char *prefix,
     DISPLAY("%s policy_elements_size: 0x%x (%u)\n", prefix,
             pollist->policy_elements_size, pollist->policy_elements_size);
 
-    char new_prefix[strlen(prefix)+8];
-    snprintf(new_prefix, sizeof(new_prefix), "%s    ", prefix);
+    char new_prefix[strnlen_s(prefix, 20)+8];
+    strcpy_s(new_prefix, sizeof(new_prefix), prefix);
+    strcat_s(new_prefix, sizeof(new_prefix), "    ");
     unsigned int i = 0;
     size_t elts_size = pollist->policy_elements_size;
     const lcp_policy_element_t *elt = pollist->policy_elements;
@@ -359,7 +361,7 @@ lcp_policy_list_t2 *add_tpm20_policy_element(lcp_policy_list_t2 *pollist,
     memmove((void *)&new_pollist->policy_elements + elt->size,
             &new_pollist->policy_elements,
             old_size - offsetof(lcp_policy_list_t2, policy_elements));
-    memcpy(&new_pollist->policy_elements, elt, elt->size);
+    memcpy_s(&new_pollist->policy_elements, elt->size, elt, elt->size);
     new_pollist->policy_elements_size += elt->size;
 
     LOG("add tpm20 policy element succeed\n");
@@ -421,8 +423,9 @@ void display_tpm20_signature(const char *prefix, const lcp_signature_t2 *sig,
         const uint16_t sig_alg, bool brief)
 {
     if( sig_alg == TPM_ALG_RSASSA) {
-        char new_prefix[strlen(prefix)+8];
-        snprintf(new_prefix, sizeof(new_prefix), "%s\t", prefix);
+        char new_prefix[strnlen_s(prefix, 20)+8];
+        strcpy_s(new_prefix, sizeof(new_prefix), prefix);
+        strcat_s(new_prefix, sizeof(new_prefix), "\t");
 
         DISPLAY("%s revocation_counter: 0x%x (%u)\n", prefix,
                 sig->rsa_signature.revocation_counter,
@@ -442,8 +445,9 @@ void display_tpm20_signature(const char *prefix, const lcp_signature_t2 *sig,
                 sig->rsa_signature.pubkey_size, sig->rsa_signature.pubkey_size);
     }
     else if ( sig_alg == TPM_ALG_ECDSA ) {
-        char new_prefix[strlen(prefix)+8];
-        snprintf(new_prefix, sizeof(new_prefix), "%s\t", prefix);
+        char new_prefix[strnlen_s(prefix, 20)+8];
+        strcpy_s(new_prefix, sizeof(new_prefix), prefix);
+        strcat_s(new_prefix, sizeof(new_prefix), "\t");
 
         DISPLAY("%s revocation_counter: 0x%x (%u)\n", prefix,
                 sig->ecc_signature.revocation_counter,
@@ -507,7 +511,7 @@ lcp_policy_list_t2 *add_tpm20_signature(lcp_policy_list_t2 *pollist,
         lcp_signature_t2 *curr_sig = get_tpm20_signature(new_pollist);
         if ( curr_sig != NULL )
             sig_begin = (void *)curr_sig - (void *)new_pollist;
-        memcpy((void *)new_pollist + sig_begin, sig, sig_size);
+        memcpy_s((void *)new_pollist + sig_begin, sig_size, sig, sig_size);
 
         return new_pollist;
     }
@@ -532,7 +536,7 @@ lcp_policy_list_t2 *add_tpm20_signature(lcp_policy_list_t2 *pollist,
         if ( curr_sig != NULL )
             sig_begin = (void *)curr_sig - (void *)new_pollist;
 
-        memcpy((void *)new_pollist + sig_begin, sig, sig_size);
+        memcpy_s((void *)new_pollist + sig_begin, sig_size, sig, sig_size);
 
         LOG("add tpm20 signature succeed!\n");
         return new_pollist;

@@ -40,6 +40,7 @@
 #include <string.h>
 #include <zlib.h>
 #include <openssl/evp.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -175,7 +176,7 @@ bool do_add(const param_data_t *params)
         md = EVP_sha1();
         EVP_DigestInit(ctx, md);
         EVP_DigestUpdate(ctx, (unsigned char *)params->cmdline,
-                         strlen(params->cmdline));
+                         strnlen_s(params->cmdline, sizeof(params->cmdline)));
         EVP_DigestFinal(ctx, (unsigned char *)&final_hash, NULL);
         if ( verbose ) {
             info_msg("hash is...");
@@ -300,7 +301,7 @@ bool do_unwrap(const param_data_t *params)
     lcp_custom_element_t *custom = (lcp_custom_element_t *)&elt->data;
     tb_policy_t *pol = (tb_policy_t *)&custom->data;
 
-    memcpy(g_policy, pol, calc_policy_size(pol));
+    memcpy_s(g_policy, MAX_TB_POLICY_SIZE, pol, calc_policy_size(pol));
 
     info_msg("writing/overwriting policy file...\n");
     if ( !write_policy_file(params->policy_file) )

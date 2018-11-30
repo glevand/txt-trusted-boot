@@ -47,6 +47,7 @@
 #include <openssl/pem.h>
 #include <openssl/err.h>
 #include <openssl/bn.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -145,7 +146,7 @@ static int create(void)
         ERROR("Error: failed to allocate policy\n");
         return 1;
     }
-    memset(pol, 0, sizeof(*pol));
+    memset_s(pol, sizeof(*pol), 0);
     pol->version = pol_ver;
     pol->hash_alg = lcp_hash_alg;
     pol->sinit_min_version = sinit_min_ver;
@@ -180,7 +181,7 @@ static int create(void)
             free(pol);
             return 1;
         }
-        memset(poldata, 0, sizeof(*poldata));
+        memset_s(poldata, sizeof(*poldata), 0);
         strlcpy(poldata->file_signature, LCP_POLICY_DATA_FILE_SIGNATURE,
                 sizeof(poldata->file_signature));
         poldata->num_lists = 0;
@@ -195,7 +196,7 @@ static int create(void)
                 return 1;
             }
             uint16_t version;
-            memcpy((void*)&version, (const void *)pollist, sizeof(uint16_t));
+            memcpy_s((void*)&version, sizeof(uint16_t), (const void *)pollist, sizeof(uint16_t));
             if ( version == LCP_TPM12_POLICY_LIST_VERSION )
                  poldata = add_tpm12_policy_list(poldata,
                                (lcp_policy_list_t *)pollist);
@@ -286,9 +287,11 @@ static int show(void)
 
             if ( pol && pol->policy_type == LCP_POLTYPE_LIST ) {
                 lcp_hash_t2 hash;
+                int diff;
                 calc_policy_data_hash(poldata, &hash, pol->hash_alg);
-                if ( memcmp(&hash, &pol->policy_hash,
-                            get_lcp_hash_size(pol->hash_alg)) == 0 )
+                if ( 0 == memcmp_s(&hash, sizeof(hash), &pol->policy_hash,
+                                   get_lcp_hash_size(pol->hash_alg), &diff)
+                     && diff == 0 )
                     DISPLAY("\npolicy data hash matches policy hash\n");
                 else {
                     ERROR("\nError: policy data hash does not match policy hash\n");

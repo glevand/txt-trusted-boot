@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -59,7 +60,7 @@ size_t get_policy_data_size(const lcp_policy_data_t2 *poldata)
 
     for ( unsigned int i = 0; i < poldata->num_lists; i++ ) {
         uint16_t  version ;
-        memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+        memcpy_s((void*)&version,sizeof(version),(const void *)pollist,sizeof(uint16_t));
         if ( version == LCP_TPM12_POLICY_LIST_VERSION ) {
 	    LOG("get_policy_data_size: version=0x0100\n");
             size += get_tpm12_policy_list_size(&(pollist->tpm12_policy_list));
@@ -110,7 +111,7 @@ bool verify_policy_data(const lcp_policy_data_t2 *poldata, size_t size)
     for ( unsigned int i = 0; i < poldata->num_lists; i++ ) {
         LOG("verifying list %u:\n", i);
         uint16_t version ;
-        memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+        memcpy_s((void*)&version,sizeof(version),(const void *)pollist,sizeof(uint16_t));
         if ( version == LCP_TPM12_POLICY_LIST_VERSION ) {
              if ( !verify_tpm12_policy_list(&(pollist->tpm12_policy_list),
                            size, NULL, false) )
@@ -145,13 +146,14 @@ void display_policy_data(const char *prefix, const lcp_policy_data_t2 *poldata,
     DISPLAY("%s file_signature: %s\n", prefix, poldata->file_signature);
     DISPLAY("%s num_lists: %u\n", prefix, poldata->num_lists);
 
-    char new_prefix[strlen(prefix)+8];
-    sprintf(new_prefix, "%s    ", prefix);
+    char new_prefix[strnlen_s(prefix, 20)+8];
+    strcpy_s(new_prefix, sizeof(new_prefix), prefix);
+    strcat_s(new_prefix, sizeof(new_prefix), "    ");
     const lcp_list_t *pollist = &poldata->policy_lists[0];
     for ( unsigned int i = 0; i < poldata->num_lists; i++ ) {
         DISPLAY("%s list %u:\n", prefix, i);
         uint16_t version ;
-        memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+        memcpy_s((void*)&version,sizeof(version),(const void *)pollist,sizeof(uint16_t));
         if ( version == LCP_TPM12_POLICY_LIST_VERSION ) {
             display_tpm12_policy_list(new_prefix,
                     &(pollist->tpm12_policy_list), brief);
@@ -186,7 +188,7 @@ lcp_policy_data_t2 *add_tpm12_policy_list(lcp_policy_data_t2 *poldata,
 
     /* realloc() copies over previous contents */
     /* add to end */
-    memcpy((void *)new_poldata + old_size, pollist, list_size);
+    memcpy_s((void *)new_poldata + old_size, list_size, pollist, list_size);
     new_poldata->num_lists++;
 
     LOG("add tpm12 policy list succeed!\n");
@@ -212,7 +214,7 @@ lcp_policy_data_t2 *add_tpm20_policy_list(lcp_policy_data_t2 *poldata,
 
     /* realloc() copies over previous contents */
     /* add to end */
-    memcpy((void *)new_poldata + old_size, pollist, list_size);
+    memcpy_s((void *)new_poldata + old_size, list_size, pollist, list_size);
     new_poldata->num_lists++;
 
     LOG("add tpm20 policy list succeed!\n");
@@ -226,14 +228,14 @@ void calc_policy_data_hash(const lcp_policy_data_t2 *poldata, lcp_hash_t2 *hash,
     size_t hash_size = get_lcp_hash_size(hash_alg);
     uint8_t hash_list[hash_size * LCP_MAX_LISTS];
 
-    memset(hash_list, 0, sizeof(hash_list));
+    memset_s(hash_list, sizeof(hash_list), 0);
 
     /* accumulate each list's msmt to list */
     lcp_hash_t2 *curr_hash = (lcp_hash_t2 *)hash_list;
     const lcp_list_t *pollist = &poldata->policy_lists[0];
     for ( unsigned int i = 0; i < poldata->num_lists; i++ ) {
         uint16_t  version ;
-        memcpy((void*)&version,(const void *)pollist,sizeof(uint16_t));
+        memcpy_s((void*)&version,sizeof(version),(const void *)pollist,sizeof(uint16_t));
         if ( version == LCP_TPM12_POLICY_LIST_VERSION ) {
             LOG("calc_policy_data_hash:version=0x0100\n" );
             calc_tpm12_policy_list_hash(&(pollist->tpm12_policy_list),

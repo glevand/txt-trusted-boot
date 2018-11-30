@@ -14,6 +14,7 @@ include $(ROOTDIR)/Config.mk
 TARGETS := txt-stat parse_err acminfo
 
 CFLAGS += -D_LARGEFILE64_SOURCE
+LIBS += $(ROOTDIR)/safestringlib/libsafestring.a
 
 #
 # universal targets

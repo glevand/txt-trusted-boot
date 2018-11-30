@@ -40,7 +40,7 @@
 #include <stdbool.h>
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
-
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/uuid.h"
 #include "../include/lcp.h"
@@ -399,7 +399,7 @@ lcp_read_index(uint32_t index,
     }
 
     ret = LCP_SUCCESS;
-    memcpy(data, policydata, read_space);
+    memcpy_s(data, *data_length, policydata, read_space);
     *data_length = read_space;
 
 exit:
@@ -987,7 +987,7 @@ lcp_get_tpmcap_auth(const char *password,
     }
     log_debug("\n");
 
-    memcpy(resp_data, resp, *outlen);
+    memcpy_s(resp_data,*outlen, resp, *outlen);
     ret = LCP_SUCCESS;
 
 exit:

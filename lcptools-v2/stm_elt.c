@@ -40,6 +40,7 @@
 #include <string.h>
 #define _GNU_SOURCE
 #include <getopt.h>
+#include <safe_lib.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -95,14 +96,14 @@ static lcp_policy_element_t *create(void)
         return NULL;
     }
 
-    memset(elt, 0, sizeof(*elt) + data_size);
+    memset_s(elt, sizeof(*elt) + data_size, 0);
     elt->size = sizeof(*elt) + data_size;
     lcp_stm_element_t2 *stm = (lcp_stm_element_t2 *)&elt->data;
     stm->hash_alg = alg_type;
     stm->num_hashes = nr_hashes;
     lcp_hash_t2 *hash = stm->hashes;
     for ( unsigned int i = 0; i < nr_hashes; i++ ) {
-        memcpy(hash, &hashes[i], get_hash_size(alg_type));
+        memcpy_s(hash, get_hash_size(alg_type), &hashes[i], get_hash_size(alg_type));
         hash = (void *)hash + get_hash_size(alg_type);
     }
     LOG("create stm element succeed!\n");

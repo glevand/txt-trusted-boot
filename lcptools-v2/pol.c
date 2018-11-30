@@ -39,6 +39,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <safe_lib.h>
+#include <snprintf_s.h>
 #define PRINT   printf
 #include "../include/config.h"
 #include "../include/hash.h"
@@ -123,7 +125,7 @@ const char *policy_type_to_str(uint8_t type)
     static char buf[32] = "";
 
     if ( type >= ARRAY_SIZE(types) ) {
-        snprintf(buf, sizeof(buf), "unknown (%u)", type);
+        snprintf_s_i(buf, sizeof(buf), "unknown (%u)", type);
         return buf;
     }
 

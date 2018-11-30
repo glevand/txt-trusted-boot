@@ -43,7 +43,8 @@
 #include <string.h>
 #include <trousers/tss.h>
 #include <trousers/trousers.h>
-
+#include <safe_lib.h>
+#include <snprintf_s.h>
 #define PRINT   printf
 #include "../include/uuid.h"
 #include "../include/lcp.h"
@@ -378,7 +379,7 @@ lcp_loaddata(uint32_t size, unsigned char **container, unsigned char *object)
         return;
 
     if ( *container )
-        memcpy(*container, object, size);
+        memcpy_s(*container, size, object, size);
     (*container) += size;
 }
 
@@ -388,7 +389,7 @@ lcp_unloaddata(uint32_t size, unsigned char **container, unsigned char *object)
     if ( *container == NULL || object == NULL )
         return;
 
-    memcpy(object, *container, size);
+    memcpy_s(object, size, *container, size);
     (*container) += size;
 }
 
@@ -499,7 +500,7 @@ calc_sizeofselect(uint32_t num_indices,
         return ret;
     }
     pselect->sizeOfSelect = bytes_to_hold;
-    memset(pselect->pcrSelect, 0, bytes_to_hold);
+    memset_s(pselect->pcrSelect, bytes_to_hold, 0);
 
     /*
      * set the bit in the selection structure
@@ -520,8 +521,8 @@ calc_sizeofselect(uint32_t num_indices,
             /*
              * set the newly allocated bytes to 0
              */
-            memset(&pselect->pcrSelect[pselect->sizeOfSelect], 0,
-                   bytes_to_hold - pselect->sizeOfSelect);
+            memset_s(&pselect->pcrSelect[pselect->sizeOfSelect],
+                   bytes_to_hold - pselect->sizeOfSelect, 0);
             pselect->sizeOfSelect = bytes_to_hold;
 
         }
@@ -535,22 +536,22 @@ void print_locality(unsigned char loc)
     char s[32] = "";
 
     if ( loc & ~0x1f )
-        sprintf(s, "unknown (%x)", (unsigned int)loc);
+        snprintf_s_i(s, sizeof(s), "unknown (%x)", loc);
     else {
         if ( !(loc & 0x1f) )
-	    strcat(s, "--, ");
+	    strcat_s(s, sizeof(s), "--, ");
 	if ( loc & TPM_LOC_ZERO )
-	    strcat(s, "0, ");
+	    strcat_s(s, sizeof(s), "0, ");
 	if ( loc & TPM_LOC_ONE )
-	    strcat(s, "1, ");
+	    strcat_s(s, sizeof(s), "1, ");
 	if ( loc & TPM_LOC_TWO )
-	    strcat(s, "2, ");
+	    strcat_s(s, sizeof(s), "2, ");
 	if ( loc & TPM_LOC_THREE )
-	    strcat(s, "3, ");
+	    strcat_s(s, sizeof(s), "3, ");
 	if ( loc & TPM_LOC_FOUR )
-	    strcat(s, "4, ");
+	    strcat_s(s, sizeof(s), "4, ");
 	/* remove trailing ", " */
-	s[strlen(s) - 2] = '\0';
+	s[strnlen_s(s, sizeof(s)) - 2] = '\0';
     }
 
     log_info("%s", s);
