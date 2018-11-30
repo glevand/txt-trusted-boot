@@ -176,7 +176,7 @@ static unsigned long build_directmap_pagetable(void)
     memset(pdptr_table, 0, sizeof(pdptr_table));
     memset(pd_table, 0, sizeof(pd_table));
 
-    for ( i = 0; i < sizeof(pd_table)/TB_L1_PAGETABLE_ENTRIES; i++ ) {
+    for ( i = 0; i < ARRAY_SIZE(pd_table)/TB_L1_PAGETABLE_ENTRIES; i++ ) {
         ppdptre = &pdptr_table[i];
         *ppdptre = MAKE_TB_PDPTE((unsigned long)(
                       pd_table + i * TB_L1_PAGETABLE_ENTRIES));
