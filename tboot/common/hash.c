@@ -42,6 +42,7 @@
 #include <misc.h>
 #include <sha1.h>
 #include <sha256.h>
+#include <sm3.h>
 #include <hash.h>
 
 /*
@@ -92,8 +93,9 @@ bool hash_buffer(const unsigned char* buf, size_t size, tb_hash_t *hash,
         return true;
     }
     else if ( hash_alg == TB_HALG_SM3 ) {
-        printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);
-        return false;
+        //printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);
+        sm3(buf, size, hash->sm3);
+        return true;
     }
     else {
         printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);
@@ -129,8 +131,11 @@ bool extend_hash(tb_hash_t *hash1, const tb_hash_t *hash2, uint16_t hash_alg)
         return true;
     }
     else if ( hash_alg == TB_HALG_SM3 ) {
-        printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);
-        return false;
+        //printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);
+        tb_memcpy(buf, &(hash1->sm3), sizeof(hash1->sm3));
+        tb_memcpy(buf + sizeof(hash1->sm3), &(hash2->sm3), sizeof(hash1->sm3));
+        sm3(buf, 2*sizeof(hash1->sm3), hash1->sm3);
+        return true;
     }
     else {
         printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);

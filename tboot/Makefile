@@ -25,6 +25,7 @@ obj-y += txt/acmod.o txt/errors.o txt/heap.o txt/mtrrs.o txt/txt.o
 obj-y += txt/verify.o txt/vmcs.o
 obj-y += common/tpm_12.o common/tpm_20.o 
 obj-y += common/sha256.o
+obj-y += common/sm3.o
 
 OBJS := $(obj-y)
 
