@@ -2032,8 +2032,15 @@ void load_framebuffer_info(loader_ctx *lctx, void *vscr)
     start = (struct mb2_tag *)(lctx->addr + 8);
     start = find_mb2_tag_type(start, MB2_TAG_TYPE_FRAMEBUFFER);
     if (start != NULL){
+        u32 ext_lfb_base;
         struct mb2_fb *mbf = (struct mb2_fb *) start;
+
         scr->lfb_base = (uint32_t) mbf->common.fb_addr;
+        ext_lfb_base = (u64)mbf->common.fb_addr >> 32;
+        if (ext_lfb_base != 0) {
+            scr->capabilities |= VIDEO_CAPABILITY_64BIT_BASE;
+            scr->ext_lfb_base = ext_lfb_base;
+        }
         scr->lfb_width = mbf->common.fb_width;
         scr->lfb_height = mbf->common.fb_height;
         scr->lfb_depth =  mbf->common.fb_bpp;

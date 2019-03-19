@@ -174,6 +174,8 @@ typedef struct __attribute__ ((packed)) {
         u16 lfb_pages;												/* 0x32 */
         u16 vesa_attrib;											/* 0x34 */
         u32 capabilities;											/* 0x36 */
+            #define VIDEO_CAPABILITY_64BIT_BASE	(1 << 1)	/* Frame buffer base is 64-bit. */
+        u32 ext_lfb_base;											/* 0x3a */
         /* padding out to 0x40 */
 } screen_info_t;
 
