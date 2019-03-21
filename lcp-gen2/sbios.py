@@ -38,8 +38,8 @@ except ImportError:
 class SBIOS( ElementGui ):
 
   CONST_TITLE = "Choose Hash File"
-  CONST_WILDCARD = "Hash file (*.hash) | *.hash|" \
-                   "All Files (*.*)    | *.*"
+  CONST_WILDCARD = "Hash file (*.hash)|*.hash|" \
+                   "All Files (*.*)|*.*"
 
   """__init__() - SBIOS class constructor"""
   def __init__( self, hashAlg ):

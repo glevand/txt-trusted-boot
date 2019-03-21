@@ -40,8 +40,8 @@ except ImportError:
 class PCONFLegacy( ElementGui ):
 
   CONST_TITLE = "Choose PCR File"
-  CONST_WILDCARD = "Pcr file (*.pcr) | *.pcr|" \
-                   "All Files (*.*)  | *.*"
+  CONST_WILDCARD = "Pcr file (*.pcr)|*.pcr|" \
+                   "All Files (*.*)|*.*"
 
   """__init__() - PCONF class constructor"""
   def __init__( self ):

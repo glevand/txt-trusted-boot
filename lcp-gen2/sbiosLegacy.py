@@ -37,8 +37,8 @@ except ImportError:
 class SBIOSLegacy( ElementGui ):
 
   CONST_TITLE = "Choose Hash File"
-  CONST_WILDCARD = "Hash file (*.hash) | *.hash|" \
-                   "All Files (*.*)    | *.*"
+  CONST_WILDCARD = "Hash file (*.hash)|*.hash|" \
+                   "All Files (*.*)|*.*"
 
   """__init__() - SBIOS class constructor"""
   def __init__( self ):
@@ -230,8 +230,8 @@ class SBIOSLegacy( ElementGui ):
 
     fileName = ''
     workdir = self.pdef.WorkingDirectory
-    wildcard = "Hash file (*.hash) | *.hash|" \
-               "All Files (*.*)    | *.*"
+    wildcard = "Hash file (*.hash)|*.hash|" \
+               "All Files (*.*)|*.*"
     dlg = wx.FileDialog(self.parent, "Choose the fallback hash file", workdir, "", wildcard, wx.OPEN)
 
     abortFlag = False     # Set to True if Add dialogue doidn't complete successfully

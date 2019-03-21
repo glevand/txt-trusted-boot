@@ -25,7 +25,7 @@ from defines import DEFINES
 class ElementGui( object ):
 
   CONST_TITLE = "Choose file"
-  CONST_WILDCARD = "All Files (*.*)  | *.*"
+  CONST_WILDCARD = "All Files (*.*)|*.*"
 
   def __init__( self ):
     pass

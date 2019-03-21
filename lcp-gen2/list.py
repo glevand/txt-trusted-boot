@@ -871,13 +871,13 @@ class LIST( object ):
 
     if currentList.PvtKeyFileIsSignature:
       title = "Choose the Signature file"
-      wildcard = "All Files (*.*)    | *.*" \
-                 "Key file (*.sig) | *.sig|"
+      wildcard = "All Files (*.*)|*.*|" \
+                 "Key file (*.sig)|*.sig|"
     else:
       title = "Choose the Private Key file"
-      wildcard = "Key file (*.pem) | *.pem|" \
-                 "Key file (*.key) | *.key|" \
-                 "All Files (*.*)    | *.*"
+      wildcard = "Key file (*.pem)|*.pem|" \
+                 "Key file (*.key)|*.key|" \
+                 "All Files (*.*)|*.*"
     dlg = wx.FileDialog(self.parent, title, workdir, "", wildcard, wx.FD_OPEN)
 
     if dlg.ShowModal() == wx.ID_OK:
@@ -929,8 +929,8 @@ class LIST( object ):
     #self.StatusBar.SetStatusText("You clicked the Browse button")
     dirname = ''   #  current working directory
     workdir = self.pdef.WorkingDirectory
-    wildcard = "Key file (*.pem) | *.pem|" \
-               "All Files (*.*)    | *.*"
+    wildcard = "Key file (*.pem)|*.pem|" \
+               "All Files (*.*)| *.*"
     dlg = wx.FileDialog(self.parent, "Choose the Public Key file", workdir, "", wildcard, wx.FD_OPEN)
 
     currentList = self.pdef.getCurrentListObject()

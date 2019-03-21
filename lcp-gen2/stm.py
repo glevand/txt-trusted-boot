@@ -37,8 +37,8 @@ except ImportError:
 class STM( ElementGui ):
 
   CONST_TITLE = "Choose Hash File"
-  CONST_WILDCARD = "Hash file (*.hash) | *.hash|" \
-                   "All Files (*.*)    | *.*"
+  CONST_WILDCARD = "Hash file (*.hash)|*.hash|" \
+                   "All Files (*.*)|*.*"
 
   """__init__() - STM class constructor"""
   def __init__( self, hashAlg):

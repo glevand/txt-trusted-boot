@@ -307,7 +307,7 @@ class MyFrame(wx.Frame):
     self.policyPanelSizer.Add( self.versionLabel, pos=(1,3))
     supportedversions = sorted(DEFINES.SUPPORTED_LCP_VERSION.keys(), reverse=True)
     defaultversion = supportedversions[0]
-    self.versionEdit = wx.ComboBox( self.policyPanel, size=(60, -1), value=defaultversion, choices=supportedversions, style=wx.CB_READONLY)
+    self.versionEdit = wx.ComboBox( self.policyPanel, size=(40, -1), value=defaultversion, choices=supportedversions, style=wx.CB_READONLY)
     #self.versionEdit.Enable( False )                                          # Version cannot be modified
     self.policyPanelSizer.Add( self.versionEdit,  pos=(1,4))
     self.Bind(wx.EVT_TEXT, self.onPolicyVersion, self.versionEdit)
@@ -475,7 +475,7 @@ class MyFrame(wx.Frame):
     self.biosLabel = wx.StaticText(self.policyPanel, label="BIOS")
     self.policyPanelSizer.Add( self.biosLabel, pos=(4,3))
     value = pdef.MaxBiosMinVersion                                   # get current value
-    self.biosEdit  = wx.TextCtrl( self.policyPanel, value=str(value), size=(40, -1))
+    self.biosEdit  = wx.TextCtrl( self.policyPanel, value=str(value), size=(30, -1))
     self.policyPanelSizer.Add( self.biosEdit,  pos=(4,4))
     self.Bind(wx.EVT_TEXT, self.onBiosRevLimit, self.biosEdit)
 
@@ -483,7 +483,7 @@ class MyFrame(wx.Frame):
     self.sinitLabel = wx.StaticText(self.policyPanel, label="SINIT")
     self.policyPanelSizer.Add( self.sinitLabel, pos=(5,3))
     value = pdef.MaxSinitMinVersion                                 # get current value
-    self.sinitEdit  = wx.TextCtrl( self.policyPanel, value=str(value), size=(40, -1))
+    self.sinitEdit  = wx.TextCtrl( self.policyPanel, value=str(value), size=(30, -1))
     self.policyPanelSizer.Add( self.sinitEdit,  pos=(5,4))
     self.Bind(wx.EVT_TEXT, self.onSinitRevLimit, self.sinitEdit)
 
@@ -533,8 +533,8 @@ class MyFrame(wx.Frame):
     global filename, dirname, pdef
 
     #self.dirname = ''   #  current owrking directory
-    wildcard = "PDEF file (*.pdef) | *.pdef|" \
-               "All Files (*.*)    | *.*"
+    wildcard = "PDEF file (*.pdef)|*.pdef|" \
+               "All Files (*.*)|*.*"
     dlg = wx.FileDialog(self, "Choose the PDEF file", dirname, "", wildcard, wx.FD_OPEN)
 
     if dlg.ShowModal() == wx.ID_OK:
@@ -555,8 +555,8 @@ class MyFrame(wx.Frame):
 
     global filename, dirname
 
-    wildcard = "PDEF file (*.pdef) | *.pdef|" \
-               "All Files (*.*)    | *.*"
+    wildcard = "PDEF file (*.pdef)|*.pdef|" \
+               "All Files (*.*)|*.*"
     dlg = wx.FileDialog(self, title, dirname, name, wildcard, wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
 
     if dlg.ShowModal() == wx.ID_OK:
@@ -703,7 +703,7 @@ class MyFrame(wx.Frame):
 
   def onGuide(self, event):
     """ onGuide - Open the User Guide"""
-    file = 'UserGuide.txt'
+    file = 'LCP2Gen User Guide.pdf'
     self.openPdf(file)
 
   def onTutorial(self, event):
@@ -1058,8 +1058,8 @@ class MyFrame(wx.Frame):
 
         else:
           # If PDEF not saved, then get the base name for the LCP_POLICY & LCP_POLICY_DATA files to build
-          wildcard = "LCP_POLICY (*.pol) | *.pol|" \
-                       "All Files (*.*)    | *.*"
+          wildcard = "LCP_POLICY (*.pol)|*.pol|" \
+                       "All Files (*.*)|*.*"
           title = "Please specify a name for the the LCP_POLICY and LCP_POLICY_DATA files to build."
           dlg = wx.FileDialog(self, title, dirname, filename, wildcard, wx.SAVE|wx.OVERWRITE_PROMPT)
 
