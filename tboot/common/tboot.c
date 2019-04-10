@@ -347,9 +347,9 @@ void begin_launch(void *addr, uint32_t magic)
     /* initialize all logging targets */
     printk_init();
 
-    printk(TBOOT_INFO"******************* TBOOT *******************\n");
+    printk(TBOOT_INFO"*********************** TBOOT ***********************\n");
     printk(TBOOT_INFO"   %s\n", TBOOT_CHANGESET);
-    printk(TBOOT_INFO"*********************************************\n");
+    printk(TBOOT_INFO"*****************************************************\n");
 
     printk(TBOOT_INFO"command line: %s\n", g_cmdline);
     /* if telled to check revocation acm result, go with simplified path */
