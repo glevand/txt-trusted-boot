@@ -1,3 +1,7 @@
+20190410: v1.9.10
+        lcp-gen2: update with latest version (wxWidgets wildcard bugfix)
+        Print latest tag in logs
+        Add support for 64bit framebuffer address
 20181130: v1.9.9
         tools: fix some dereference-NULL issues reported by klocwork
         tools: replace banned mem/str fns with corresponding ones in safestringlib
