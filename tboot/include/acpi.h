@@ -356,7 +356,7 @@ struct dmar_remapping {
 
     u_int8_t reserved;
     u_int16_t segment_number;
-    u_int8_t register_base_address[8];
+    u_int64_t register_base_address;
     struct device_scope device_scope_entry[1]; /* Device Scope starts here */
 } __packed;
 
@@ -498,6 +498,7 @@ extern bool remove_vtd_dmar_table(void);
 
 extern struct acpi_table_ioapic *get_acpi_ioapic_table(void);
 extern struct acpi_mcfg *get_acpi_mcfg_table(void);
+extern struct acpi_dmar *get_vtd_dmar_table(void);
 extern void disable_smis(void);
 
 extern bool machine_sleep(const tboot_acpi_sleep_info_t *);

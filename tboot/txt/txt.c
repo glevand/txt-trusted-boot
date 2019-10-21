@@ -56,6 +56,7 @@
 #include <hash.h>
 #include <cmdline.h>
 #include <acpi.h>
+#include <vtd.h>
 #include <txt/txt.h>
 #include <txt/config_regs.h>
 #include <txt/mtrrs.h>
@@ -527,6 +528,42 @@ bool evtlog_append(uint8_t pcr, hash_list_t *hl, uint32_t type)
 __data uint32_t g_using_da = 0;
 __data acm_hdr_t *g_sinit = 0;
 
+static void configure_vtd(void)
+{
+    uint32_t remap_length;
+    struct dmar_remapping *dmar_remap = vtd_get_dmar_remap(&remap_length);
+
+    if (dmar_remap == NULL) {
+        printk("cannot get DMAR remapping strucutues, skiping configuration\n");
+        return;
+    } else {
+        printk("configuring DMAR remapping\n");
+    }
+
+    struct dmar_remapping *iter, *next;
+    struct dmar_remapping *end = ((void *)dmar_remap) + remap_length;
+
+    for (iter = dmar_remap; iter < end; iter = next) {
+        next = (void *)iter + iter->length;
+        if (iter->length == 0) {
+            /* Avoid looping forever on bad ACPI tables */
+            printk("    invalid 0-length structure\n");
+            break;
+        } else if (next > end) {
+            /* Avoid passing table end */
+            printk("    record passes table end\n");
+            break;
+        }
+
+        if (iter->type == DMAR_REMAPPING_DRHD) {
+            if (!vtd_disable_dma_remap(iter)) {
+                printk("    vtd_disable_dma_remap failed!\n");
+            }
+        }
+    }
+
+}
+
 /*
  * sets up TXT heap
  */
@@ -810,6 +847,8 @@ tb_error_t txt_launch_environment(loader_ctx *lctx)
                              g_mle_hdr.mle_end_off - g_mle_hdr.mle_start_off);
     if ( mle_ptab_base == NULL )
         return TB_ERR_FATAL;
+
+    configure_vtd();
 
     /* initialize TXT heap */
     txt_heap = init_txt_heap(mle_ptab_base, g_sinit, lctx);

@@ -53,6 +53,7 @@
 #include <hash.h>
 #include <integrity.h>
 #include <cmdline.h>
+#include <vtd.h>
 #include <txt/txt.h>
 #include <txt/smx.h>
 #include <txt/mtrrs.h>

@@ -70,6 +70,7 @@
 #include <integrity.h>
 #include <cmdline.h>
 #include <tpm_20.h>
+#include <vtd.h>
 
 extern void _prot_to_real(uint32_t dist_addr);
 extern bool set_policy(void);
@@ -170,7 +171,7 @@ static void post_launch(void)
 
     /* backup DMAR table */
     if ( get_tboot_save_vtd() )
-        save_vtd_dmar_table();
+        vtd_save_dmar_table();
 
     if ( s3_flag  )    
          s3_launch();
@@ -475,7 +476,7 @@ void s3_launch(void)
 
     /* remove DMAR table if necessary */
     if ( get_tboot_save_vtd() )
-        remove_vtd_dmar_table();
+        vtd_remove_dmar_table();
 
     if ( !is_launched() )
         apply_policy(TB_ERR_S3_INTEGRITY);
@@ -594,7 +595,7 @@ void shutdown(void)
     if ( _tboot_shared.shutdown_type == TB_SHUTDOWN_S3 ) {
         /* restore DMAR table if needed */
         if ( get_tboot_save_vtd() )
-            restore_vtd_dmar_table();
+            vtd_restore_dmar_table();
 	if ( tpm->major == TPM20_VER_MAJOR ) {
 	    tpm_fp->context_flush(tpm, tpm->cur_loc, handle2048);
 	    tpm_fp->context_load(tpm, tpm->cur_loc, &tpm2_context_saved, &handle2048);

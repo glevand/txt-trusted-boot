@@ -13,7 +13,7 @@ TARGET := $(CURDIR)/tboot
 
 # boot.o must be first
 obj-y := common/boot.o
-obj-y += common/acpi.o common/cmdline.o common/com.o common/e820.o
+obj-y += common/acpi.o common/cmdline.o common/com.o common/e820.o common/vtd.o
 obj-y += common/elf.o common/hash.o common/index.o common/integrity.o
 obj-y += common/linux.o common/loader.o common/memcmp.o common/memcpy.o
 obj-y += common/misc.o common/mutex.o common/paging.o common/pci_cfgreg.o
