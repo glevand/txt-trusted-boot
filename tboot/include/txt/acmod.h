@@ -88,6 +88,10 @@ extern acm_hdr_t *g_sinit;
 /* value of module_vendor field */
 #define ACM_VENDOR_INTEL        0x8086
 
+/* ranges of padding present in TXTCR_SINIT_SIZE reg */
+#define ACM_SIZE_MIN_PADDING    0x10000
+#define ACM_SIZE_MAX_PADDING    0x40000
+
 typedef union {
     uint32_t _raw;
     struct {

@@ -438,7 +438,31 @@ txt_caps_t get_sinit_capabilities(const acm_hdr_t* hdr)
     return info_table->capabilities;
 }
 
-static bool is_acmod(const void *acmod_base, uint32_t acmod_size, uint8_t *type,                      bool quiet)
+static bool are_sizes_equal_pad_adjusted(uint32_t acmod_size, acm_hdr_t *acm_hdr)
+{
+    /* Sizes are equal, so no padding */
+    if ( acmod_size == (acm_hdr->size * 4) ) {
+        return true;
+    }
+
+    /* Padding can't be negative */
+    if ( acmod_size < (acm_hdr->size * 4) ) {
+        return false;
+    }
+
+    /* Check if padding is in allowed range */
+    if ( (acmod_size - (acm_hdr->size * 4) >= ACM_SIZE_MIN_PADDING) &&
+         (acmod_size - (acm_hdr->size * 4) <= ACM_SIZE_MAX_PADDING) ) {
+        printk(TBOOT_WARN"\t acmod_size=%x, != acm_hdr->size*4=%x"
+               ", padding present (assuming 0x%x padding)\n",
+               acmod_size, acm_hdr->size * 4, acmod_size - (acm_hdr->size * 4));
+        return true;
+    }
+
+    return false;
+}
+
+static bool is_acmod(const void *acmod_base, uint32_t acmod_size, uint8_t *type, bool quiet)
 {
     acm_hdr_t *acm_hdr = (acm_hdr_t *)acmod_base;
 
@@ -459,9 +483,9 @@ static bool is_acmod(const void *acmod_base, uint32_t acmod_size, uint8_t *type,
     }
 
     /* then check size equivalency */
-    if ( acmod_size != acm_hdr->size * 4 ) {
+    if ( !are_sizes_equal_pad_adjusted(acmod_size, acm_hdr) ) {
         if ( !quiet )
-            printk(TBOOT_ERR"\t ACM size is too small: acmod_size=%x,"
+            printk(TBOOT_ERR"\t ACM size mismatch: acmod_size=%x,"
                    " acm_hdr->size*4=%x\n", acmod_size, acm_hdr->size*4);
         return false;
     }
