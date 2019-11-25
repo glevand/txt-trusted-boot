@@ -1,3 +1,7 @@
+20191125: v1.9.11
+        tb_polgen: Add support for SHA256
+        Configure IOMMU before executing GETSEC[SENTER]
+        SINIT ACM can have padding, handle that when checking size
 20190410: v1.9.10
         lcp-gen2: update with latest version (wxWidgets wildcard bugfix)
         Print latest tag in logs
