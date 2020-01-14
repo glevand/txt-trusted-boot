@@ -768,11 +768,12 @@ bool prepare_tpm(void)
      * must ensure TPM_ACCESS_0.activeLocality bit is clear
      * (: locality is not active)
      */
-   if (is_tpm_crb()) 
-//   	return release_locality_crb(0);
-       return true;
-   else 
-   	return release_locality(0);
+   if ( is_tpm_crb() ) {
+       return tpm_relinquish_locality_crb(0);
+   }
+   else {
+       return release_locality(0);
+   }
 }
 
 bool tpm_request_locality_crb(uint32_t locality){

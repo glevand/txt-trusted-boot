@@ -863,15 +863,6 @@ tb_error_t txt_launch_environment(loader_ctx *lctx)
     if ( !set_mtrrs_for_acmod(g_sinit) )
         return TB_ERR_FATAL;
 
-   /* deactivate current locality */
-   if (g_tpm_family == TPM_IF_20_CRB ) {
-       printk(TBOOT_INFO"Relinquish CRB localility 0 before executing GETSEC[SENTER]...\n");
-	if (!tpm_relinquish_locality_crb(0)){
-		printk(TBOOT_INFO"Relinquish CRB locality 0 failed...\n");
-		apply_policy(TB_ERR_TPM_NOT_READY) ;
-	}
-   }
-
    /*{
    tpm_reg_loc_ctrl_t    reg_loc_ctrl;
    tpm_reg_loc_state_t  reg_loc_state;

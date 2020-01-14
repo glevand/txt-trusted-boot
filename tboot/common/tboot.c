@@ -488,6 +488,15 @@ void s3_launch(void)
     }
 
     print_tboot_shared(&_tboot_shared);
+    
+    if (g_tpm_family != TPM_IF_20_CRB ) {
+        if (!release_locality(tpm->cur_loc))
+            printk(TBOOT_ERR"Release TPM FIFO locality %d failed \n", tpm->cur_loc);
+    }
+    else {
+        if (!tpm_relinquish_locality_crb(tpm->cur_loc))
+            printk(TBOOT_ERR"Relinquish TPM CRB locality %d failed \n", tpm->cur_loc);
+    }
 
     /* (optionally) pause when transferring kernel resume */
     if ( g_vga_delay > 0 )
