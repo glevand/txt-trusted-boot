@@ -48,12 +48,13 @@ extern void invoke_safe_str_constraint_handler(
  * Safe C Lib internal string routine to consolidate error handling
  */
 static inline void handle_error(char *orig_dest, rsize_t orig_dmax,
-                                char *err_msg, errno_t err_code)
+                                const char *err_msg, errno_t err_code)
 {
 #ifdef SAFECLIB_STR_NULL_SLACK
     /* null string to eliminate partial copy */
     while (orig_dmax) { *orig_dest = '\0'; orig_dmax--; orig_dest++; }
 #else
+    (void) orig_dmax;
     *orig_dest = '\0';
 #endif
 
@@ -62,12 +63,13 @@ static inline void handle_error(char *orig_dest, rsize_t orig_dmax,
 }
 
 static inline void handle_wc_error(wchar_t *orig_dest, rsize_t orig_dmax,
-                                char *err_msg, errno_t err_code)
+                                   const char *err_msg, errno_t err_code)
 {
 #ifdef SAFECLIB_STR_NULL_SLACK
     /* null string to eliminate partial copy */
     while (orig_dmax) { *orig_dest = L'\0'; orig_dmax--; orig_dest++; }
 #else
+    (void) orig_dmax;
     *orig_dest = L'\0';
 #endif
 

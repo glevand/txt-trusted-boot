@@ -67,6 +67,7 @@
 
 void abort_handler_s(const char *msg, void *ptr, errno_t error)
 {
+	(void) ptr;
 	slprintf("ABORT CONSTRAINT HANDLER: (%u) %s\n", error,
 		 (msg) ? msg : "Null message");
 	slabort();

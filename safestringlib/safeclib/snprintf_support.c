@@ -78,6 +78,7 @@ parse_format(const char *format, char pformatList[], unsigned int maxFormats)
 			case '+' : // force a sign be used
 				index++; // skip the flag character
 				break;
+			default: break;
 			}
 			// check for and skip the optional field width
 			while ( format[index] != '\0' && format[index] >= '0' && format[index] <= '9') {
@@ -112,6 +113,7 @@ parse_format(const char *format, char pformatList[], unsigned int maxFormats)
 			case 'z' :
 			case 't' : index++;
 			           break;
+			default: break;
 			}
 
 			// Recognize and record the actual modifier
@@ -212,6 +214,7 @@ check_integer_format(const char format)
 		case FMT_INT   :
 			retValue = 1;
 			break;
+		default: break;
 	}
 	return retValue;
 }
