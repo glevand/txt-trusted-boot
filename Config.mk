@@ -45,22 +45,22 @@ CFLAGS_WARN       = -Wall -Wformat-security -Werror -Wstrict-prototypes \
 	            $(call cc-option,$(CC),-Wlogical-op,) \
 	            -Wno-missing-field-initializers
 
-AS         = as
-LD         = ld
-CC         = gcc
-CPP        = cpp
-AR         = ar
-RANLIB     = ranlib
-NM         = nm
-STRIP      = strip
-OBJCOPY    = objcopy
-OBJDUMP    = objdump
+AS         ?= as
+LD         ?= ld
+CC         ?= gcc
+CPP        ?= cpp
+AR         ?= ar
+RANLIB     ?= ranlib
+NM         ?= nm
+STRIP      ?= strip
+OBJCOPY    ?= objcopy
+OBJDUMP    ?= objdump
 
 ifeq ($(debug),n)
-INSTALL_STRIP = -s
+INSTALL_STRIP ?= -s
 endif
 
-INSTALL      = install
+INSTALL      ?= install
 INSTALL_DIR  = $(INSTALL) -d -m0755 -p
 INSTALL_DATA = $(INSTALL) -m0644 -p
 INSTALL_PROG = $(INSTALL) $(INSTALL_STRIP) -m0755 -p
