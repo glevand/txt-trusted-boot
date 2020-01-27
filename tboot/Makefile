@@ -41,7 +41,7 @@ $(TARGET) : $(OBJS) $(TARGET_LDS)
 	rm -f $(@D)/.$(@F).0
 
 $(TARGET_LDS) : $(TARGET_LDS).x $(HDRS)
-	$(CPP) -P -E -Ui386 $(AFLAGS) -o $@ $<
+	$(CPP) -x c -P -E -Ui386 $(AFLAGS) -o $@ $<
 
 $(TARGET_LDS).x : FORCE
 
