@@ -31,6 +31,7 @@
 ^tboot/tboot$
 ^tboot/tboot-syms$
 ^tboot/tboot.gz$
+^tboot/tboot.strip$
 ^lcptools/tpmnv_defindex$
 ^lcptools/tpmnv_getcap$
 ^lcptools/tpmnv_lock$

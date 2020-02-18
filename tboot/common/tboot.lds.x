@@ -29,6 +29,7 @@ SECTIONS
 	*(.text)
 	*(.fixup)
 	*(.gnu.warning)
+	*(.comment)
 	} :text = 0x9090
 
   .rodata : { *(.rodata) *(.rodata.*) }
