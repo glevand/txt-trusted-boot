@@ -397,8 +397,10 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
              */
             efi->efi_memmap_hi = 0;
 
-            printk(TBOOT_INFO"EFI memory map after modifications:\n");
-            efi_memmap_dump();
+            if (get_tboot_dump_memmap()) {
+                printk(TBOOT_INFO"EFI memory map after modifications:\n");
+                efi_memmap_dump();
+            }
 
             printk(TBOOT_INFO "EFI memmap: memmap base: 0x%x, memmap size: 0x%x\n",
                   efi->efi_memmap, efi->efi_memmap_size);

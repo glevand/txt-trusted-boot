@@ -87,6 +87,7 @@ static const cmdline_option_t g_tboot_cmdline_options[] = {
     { "ignore_prev_err", "true"},    /* true|false */
     { "force_tpm2_legacy_log", "false"}, /* true|false */
     { "save_vtd", "false"},          /* true|false */
+    { "dump_memmap", "false"},          /* true|false */
     { NULL, NULL }
 };
 static char g_tboot_param_values[ARRAY_SIZE(g_tboot_cmdline_options)][MAX_VALUE_LEN];
@@ -560,6 +561,17 @@ bool get_tboot_save_vtd(void)
               g_tboot_param_values,
               "save_vtd");
     if ( save_vtd != NULL && tb_strcmp(save_vtd, "true") == 0 )
+       return true;
+    return false;
+}
+
+bool get_tboot_dump_memmap(void)
+{
+    const char *dump_memmap =
+       get_option_val(g_tboot_cmdline_options,
+              g_tboot_param_values,
+              "dump_memmap");
+    if ( dump_memmap != NULL && tb_strcmp(dump_memmap, "true") == 0 )
        return true;
     return false;
 }

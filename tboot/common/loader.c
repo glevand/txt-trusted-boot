@@ -1395,8 +1395,11 @@ bool launch_kernel(bool is_measured_launch)
 
     /* replace map in loader context with copy */
     replace_e820_map(g_ldr_ctx);
-    printk(TBOOT_DETA"adjusted e820 map:\n");
-    print_e820_map();
+
+    if (get_tboot_dump_memmap()) {
+        printk(TBOOT_DETA"adjusted e820 map:\n");
+        print_e820_map();
+    }
 
     if ( !verify_loader_context(g_ldr_ctx) )
         return false;
@@ -1892,12 +1895,6 @@ replace_e820_map(loader_ctx *lctx)
                 old++, new++;
             }
         }
-        /* 
-           printk(TBOOT_INFO"AFTER replace_e820_map, loader context:\n");
-           print_loader_ctx(lctx);
-        */
-        printk(TBOOT_INFO"replaced memory map:\n");
-        print_e820_map();
         return;
     }
     return;

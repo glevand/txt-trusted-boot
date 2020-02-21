@@ -383,8 +383,10 @@ void begin_launch(void *addr, uint32_t magic)
     if ( !s3_flag ) {
         if ( !copy_e820_map(g_ldr_ctx) )  apply_policy(TB_ERR_FATAL);
         if (efi_memmap_copy(g_ldr_ctx)) {
-            printk(TBOOT_INFO"Original EFI memory map:\n");
-            efi_memmap_dump();
+            if (get_tboot_dump_memmap()) {
+                printk(TBOOT_INFO"Original EFI memory map:\n");
+                efi_memmap_dump();
+            }
         }
     }
 
