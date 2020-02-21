@@ -57,6 +57,7 @@
 #include <txt/acmod.h>
 #include <cmdline.h>
 #include <tpm.h>
+#include <efi_memmap.h>
 
 /* copy of kernel/VMM command line so that can append 'tboot=0x1234' */
 static char *new_cmdline = (char *)TBOOT_KERNEL_CMDLINE_ADDR;
@@ -800,16 +801,20 @@ static bool move_modules_to_high_memory(loader_ctx  *lctx)
         memRequired += PAGE_UP(m->mod_end - m->mod_start);
     }
 
-    /*  NOTE: the e820 map has been modified already to reserve critical
+    /*  NOTE: the memory maps have been modified already to reserve critical
         memory regions (tboot memory, etc ...). get_highest_sized_ram
         will return a range that excludes critical memory regions. */
-    get_highest_sized_ram(  memRequired, 0x100000000ULL,
-                            &max_ram_base, &max_ram_size);
-    if(!max_ram_base || !max_ram_size){
-        printk(TBOOT_INFO"ERROR No memory area found for image relocation!\n");
-        printk(TBOOT_INFO"required 0x%X\n", memRequired);
-        return false;
+    if (!efi_memmap_get_highest_sized_ram(memRequired, 0x100000000ULL,
+                                          &max_ram_base, &max_ram_size)) {
+        if (!e820_get_highest_sized_ram(memRequired, 0x100000000ULL,
+                                        &max_ram_base, &max_ram_size)) {
+            printk(TBOOT_INFO"ERROR No memory area found for image"
+                             "relocation!\n");
+            printk(TBOOT_INFO"required 0x%X\n", memRequired);
+            return false;
+        }
     }
+
     printk(TBOOT_INFO"highest suitable area @ 0x%llX (size 0x%llX)\n",
             max_ram_base, max_ram_size);
     ld_ceiling = PAGE_DOWN(max_ram_base + max_ram_size);
@@ -1383,6 +1388,9 @@ bool launch_kernel(bool is_measured_launch)
         printk(TBOOT_INFO"reserving tboot memory log (%Lx - %Lx) in e820 table\n", base, (base + size - 1));
         if ( !e820_protect_region(base, size, E820_RESERVED) )
             apply_policy(TB_ERR_FATAL);
+        if (!efi_memmap_reserve(base, size)) {
+            apply_policy(TB_ERR_FATAL);
+        }
     }
 
     /* replace map in loader context with copy */

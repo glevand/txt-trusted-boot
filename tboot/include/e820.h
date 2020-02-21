@@ -86,42 +86,8 @@ extern void print_e820_map(void);
 extern uint32_t e820_check_region(uint64_t base, uint64_t length);
 extern bool get_ram_ranges(uint64_t *min_lo_ram, uint64_t *max_lo_ram,
                            uint64_t *min_hi_ram, uint64_t *max_hi_ram);
-extern void get_highest_sized_ram(uint64_t size, uint64_t limit,
-                                  uint64_t *ram_base, uint64_t *ram_size);
-
-/*
- * Memory map descriptor:
- */
-
-/* Memory types: */
-#define EFI_RESERVED_TYPE		 0
-#define EFI_LOADER_CODE			 1
-#define EFI_LOADER_DATA			 2
-#define EFI_BOOT_SERVICES_CODE		 3
-#define EFI_BOOT_SERVICES_DATA		 4
-#define EFI_RUNTIME_SERVICES_CODE	 5
-#define EFI_RUNTIME_SERVICES_DATA	 6
-#define EFI_CONVENTIONAL_MEMORY		 7
-#define EFI_UNUSABLE_MEMORY		 8
-#define EFI_ACPI_RECLAIM_MEMORY		 9
-#define EFI_ACPI_MEMORY_NVS		10
-#define EFI_MEMORY_MAPPED_IO		11
-#define EFI_MEMORY_MAPPED_IO_PORT_SPACE	12
-#define EFI_PAL_CODE			13
-#define EFI_MAX_MEMORY_TYPE		14
-
-/* Attribute values: */
-#define EFI_MEMORY_UC		((u64)0x0000000000000001ULL)	/* uncached */
-#define EFI_MEMORY_WC		((u64)0x0000000000000002ULL)	/* write-coalescing */
-#define EFI_MEMORY_WT		((u64)0x0000000000000004ULL)	/* write-through */
-#define EFI_MEMORY_WB		((u64)0x0000000000000008ULL)	/* write-back */
-#define EFI_MEMORY_WP		((u64)0x0000000000001000ULL)	/* write-protect */
-#define EFI_MEMORY_RP		((u64)0x0000000000002000ULL)	/* read-protect */
-#define EFI_MEMORY_XP		((u64)0x0000000000004000ULL)	/* execute-protect */
-#define EFI_MEMORY_RUNTIME	((u64)0x8000000000000000ULL)	/* range requires runtime mapping */
-#define EFI_MEMORY_DESCRIPTOR_VERSION	1
-
-#define EFI_PAGE_SHIFT		12
+extern bool e820_get_highest_sized_ram(uint64_t size, uint64_t limit,
+                                       uint64_t *ram_base, uint64_t *ram_size);
 
 #endif    /* __E820_H__ */
 

@@ -50,6 +50,7 @@
 #include <hash.h>
 #include <integrity.h>
 #include <processor.h>
+#include <efi_memmap.h>
 
 extern loader_ctx *g_ldr_ctx;
 
@@ -174,11 +175,13 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
             mem_limit = 0x100000000ULL;
 
         uint64_t max_ram_base, max_ram_size;
-        get_highest_sized_ram(initrd_size, mem_limit,
-                              &max_ram_base, &max_ram_size);
-        if ( max_ram_size == 0 ) {
-            printk(TBOOT_ERR"not enough RAM for initrd\n");
-            return false;
+        if (!efi_memmap_get_highest_sized_ram(initrd_size, mem_limit,
+                                              &max_ram_base, &max_ram_size)) {
+            if (!e820_get_highest_sized_ram(initrd_size, mem_limit,
+                                            &max_ram_base, &max_ram_size)) {
+                printk(TBOOT_ERR"not enough RAM for initrd\n");
+                return false;
+            }
         }
         if ( initrd_size > max_ram_size ) {
             printk(TBOOT_ERR"initrd_size is too large\n");
@@ -376,8 +379,8 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
             }
         }
 
-        efi_mmap_addr = find_efi_memmap(g_ldr_ctx, &descr_size,
-                                        &descr_vers, &mmap_size);
+        efi_mmap_addr = efi_memmap_get_addr(&descr_size, &descr_vers,
+                                            &mmap_size);
         if (!efi_mmap_addr) {
             printk(TBOOT_INFO"failed to get EFI memory map\n");
             efi->efi_memdescr_size = 0x1; // Avoid div by 0 in kernel.
@@ -393,6 +396,9 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
              * the Multiboot2 information structure, etc. higher than 4 GiB - 1.
              */
             efi->efi_memmap_hi = 0;
+
+            printk(TBOOT_INFO"EFI memory map after modifications:\n");
+            efi_memmap_dump();
 
             printk(TBOOT_INFO "EFI memmap: memmap base: 0x%x, memmap size: 0x%x\n",
                   efi->efi_memmap, efi->efi_memmap_size);

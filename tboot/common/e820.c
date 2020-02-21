@@ -44,6 +44,7 @@
 #include <stdarg.h>
 #include <misc.h>
 #include <pci_cfgreg.h>
+#include <efi_memmap.h>
 #include <e820.h>
 #include <txt/config_regs.h>
 
@@ -593,8 +594,8 @@ bool get_ram_ranges(uint64_t *min_lo_ram, uint64_t *max_lo_ram,
      * to find it first so that we can tell when we have passed it
      */
     if ( g_min_ram > 0 ) {
-        get_highest_sized_ram(g_min_ram, 0x100000000ULL, &last_min_ram_base,
-                              &last_min_ram_size);
+        e820_get_highest_sized_ram(g_min_ram, 0x100000000ULL,
+                                   &last_min_ram_base, &last_min_ram_size);
         printk(TBOOT_DETA"highest min_ram (0x%x) region found: base=0x%Lx, size=0x%Lx\n",
                g_min_ram, last_min_ram_base, last_min_ram_size);
     }
@@ -628,6 +629,9 @@ bool get_ram_ranges(uint64_t *min_lo_ram, uint64_t *max_lo_ram,
                     printk(TBOOT_DETA"discarding RAM above reserved regions: 0x%Lx - 0x%Lx\n", base, limit);
                     if ( !e820_reserve_ram(base, limit - base) )
                         return false;
+                    if (!efi_memmap_reserve(base, limit - base)) {
+                        return false;
+                    }
                 }
             }
 
@@ -658,13 +662,13 @@ bool get_ram_ranges(uint64_t *min_lo_ram, uint64_t *max_lo_ram,
 }
 
 /* find highest (< <limit>) RAM region of at least <size> bytes */
-void get_highest_sized_ram(uint64_t size, uint64_t limit,
-                           uint64_t *ram_base, uint64_t *ram_size)
+bool e820_get_highest_sized_ram(uint64_t size, uint64_t limit,
+                                uint64_t *ram_base, uint64_t *ram_size)
 {
     uint64_t last_fit_base = 0, last_fit_size = 0;
 
     if ( ram_base == NULL || ram_size == NULL )
-        return;
+        return false;
 
     for ( unsigned int i = 0; i < g_nr_map; i++ ) {
         memory_map_t *entry = &g_copy_e820_map[i];
@@ -683,8 +687,13 @@ void get_highest_sized_ram(uint64_t size, uint64_t limit,
         }
     }
 
-    *ram_base = last_fit_base;
-    *ram_size = last_fit_size;
+    if (last_fit_size == 0) {
+        return false;
+    } else {
+        *ram_base = last_fit_base;
+        *ram_size = last_fit_size;
+        return true;
+    }
 }
 
 

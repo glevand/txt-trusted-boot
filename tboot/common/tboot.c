@@ -71,6 +71,7 @@
 #include <cmdline.h>
 #include <tpm_20.h>
 #include <vtd.h>
+#include <efi_memmap.h>
 
 extern void _prot_to_real(uint32_t dist_addr);
 extern bool set_policy(void);
@@ -208,6 +209,9 @@ static void post_launch(void)
     printk(TBOOT_INFO"protecting tboot (%Lx - %Lx) in e820 table\n", base,      (base + size - 1));
     if ( !e820_protect_region(base, size, mem_type) )      
         apply_policy(TB_ERR_FATAL);
+    if (!efi_memmap_reserve(base, size)) {
+        apply_policy(TB_ERR_FATAL);
+    }
 
     /*
      * verify modules against policy
@@ -378,6 +382,10 @@ void begin_launch(void *addr, uint32_t magic)
     /* make copy of e820 map that we will use and adjust */
     if ( !s3_flag ) {
         if ( !copy_e820_map(g_ldr_ctx) )  apply_policy(TB_ERR_FATAL);
+        if (efi_memmap_copy(g_ldr_ctx)) {
+            printk(TBOOT_INFO"Original EFI memory map:\n");
+            efi_memmap_dump();
+        }
     }
 
     /* we need to make sure this is a (TXT-) capable platform before using */

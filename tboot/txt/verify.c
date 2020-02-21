@@ -54,6 +54,7 @@
 #include <integrity.h>
 #include <cmdline.h>
 #include <vtd.h>
+#include <efi_memmap.h>
 #include <txt/txt.h>
 #include <txt/smx.h>
 #include <txt/mtrrs.h>
@@ -255,6 +256,9 @@ static bool reserve_vtd_delta_mem(uint64_t min_lo_ram, uint64_t max_lo_ram,
                base, base + length);
         if ( !e820_reserve_ram(base, length) )
             return false;
+        if (!efi_memmap_reserve(base, length)) {
+           return false;
+        }
     }
     if ( max_hi_ram != (os_sinit_data->vtd_pmr_hi_base +
                         os_sinit_data->vtd_pmr_hi_size) ) {
@@ -264,6 +268,9 @@ static bool reserve_vtd_delta_mem(uint64_t min_lo_ram, uint64_t max_lo_ram,
                base, base + length);
         if ( !e820_reserve_ram(base, length) )
             return false;
+        if (!efi_memmap_reserve(base, length)) {
+           return false;
+        }
     }
 
     return true;

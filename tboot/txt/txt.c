@@ -57,6 +57,7 @@
 #include <cmdline.h>
 #include <acpi.h>
 #include <vtd.h>
+#include <efi_memmap.h>
 #include <txt/txt.h>
 #include <txt/config_regs.h>
 #include <txt/mtrrs.h>
@@ -1216,6 +1217,9 @@ tb_error_t txt_protect_mem_regions(void)
            (base + size - 1));
     if ( !e820_protect_region(base, size, E820_RESERVED) )
         return TB_ERR_FATAL;
+    if (!efi_memmap_reserve(base, size)) {
+        return TB_ERR_FATAL;
+    }
 
     /* SINIT */
     base = read_pub_config_reg(TXTCR_SINIT_BASE);
@@ -1224,6 +1228,9 @@ tb_error_t txt_protect_mem_regions(void)
            (base + size - 1));
     if ( !e820_protect_region(base, size, E820_RESERVED) )
         return TB_ERR_FATAL;
+    if (!efi_memmap_reserve(base, size)) {
+        return TB_ERR_FATAL;
+    }
 
     /* TXT private space */
     base = TXT_PRIV_CONFIG_REGS_BASE;
@@ -1233,6 +1240,9 @@ tb_error_t txt_protect_mem_regions(void)
            base, (base + size - 1));
     if ( !e820_protect_region(base, size, E820_RESERVED) )
         return TB_ERR_FATAL;
+    if (!efi_memmap_reserve(base, size)) {
+        return TB_ERR_FATAL;
+    }
 
     /* ensure that memory not marked as good RAM by the MDRs is RESERVED in
        the e820 table */
