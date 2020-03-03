@@ -44,8 +44,6 @@
 #include <string.h>
 #include <tpm.h>
 #include <tpm_20.h>
-#include <sha1.h>
-#include <sha256.h>
 #include <cmdline.h>
 #include <uuid.h>
 #include <mle.h>

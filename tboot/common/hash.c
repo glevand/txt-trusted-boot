@@ -41,7 +41,7 @@
 #include <string.h>
 #include <misc.h>
 #include <sha1.h>
-#include <sha256.h>
+#include <sha2.h>
 #include <hash.h>
 
 /*
@@ -91,6 +91,14 @@ bool hash_buffer(const unsigned char* buf, size_t size, tb_hash_t *hash,
         sha256_buffer(buf, size, hash->sha256);
         return true;
     }
+    else if ( hash_alg == TB_HALG_SHA384 ) {
+        sha384_buffer(buf, size, hash->sha384);
+        return true;
+    }
+    else if ( hash_alg == TB_HALG_SHA512 ) {
+        sha512_buffer(buf, size, hash->sha512);
+        return true;
+    }
     else if ( hash_alg == TB_HALG_SM3 ) {
         printk(TBOOT_ERR"unsupported hash alg (%u)\n", hash_alg);
         return false;
@@ -126,6 +134,18 @@ bool extend_hash(tb_hash_t *hash1, const tb_hash_t *hash2, uint16_t hash_alg)
         tb_memcpy(buf, &(hash1->sha256), sizeof(hash1->sha256));
         tb_memcpy(buf + sizeof(hash1->sha256), &(hash2->sha256), sizeof(hash1->sha256));
         sha256_buffer(buf, 2*sizeof(hash1->sha256), hash1->sha256);
+        return true;
+    }
+    else if ( hash_alg == TB_HALG_SHA384 ) {
+        tb_memcpy(buf, &(hash1->sha384), sizeof(hash1->sha384));
+        tb_memcpy(buf + sizeof(hash1->sha384), &(hash2->sha384), sizeof(hash1->sha384));
+        sha384_buffer(buf, 2*sizeof(hash1->sha384), hash1->sha384);
+        return true;
+    }
+    else if ( hash_alg == TB_HALG_SHA512 ) {
+        tb_memcpy(buf, &(hash1->sha512), sizeof(hash1->sha512));
+        tb_memcpy(buf + sizeof(hash1->sha512), &(hash2->sha512), sizeof(hash1->sha512));
+        sha512_buffer(buf, 2*sizeof(hash1->sha512), hash1->sha512);
         return true;
     }
     else if ( hash_alg == TB_HALG_SM3 ) {

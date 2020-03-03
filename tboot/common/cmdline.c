@@ -529,6 +529,12 @@ void get_tboot_extpol(void)
     } else if ( tb_strcmp(extpol, "sm3") == 0 ) {
         tpm->extpol = TB_EXTPOL_FIXED;
         tpm->cur_alg = TB_HALG_SM3;
+    } else if ( tb_strcmp(extpol, "sha384") == 0 ) {
+        tpm->extpol = TB_EXTPOL_FIXED;
+        tpm->cur_alg = TB_HALG_SHA384;
+    } else if ( tb_strcmp(extpol, "sha512") == 0 ) {
+        tpm->extpol = TB_EXTPOL_FIXED;
+        tpm->cur_alg = TB_HALG_SHA512;
     }
 }
 

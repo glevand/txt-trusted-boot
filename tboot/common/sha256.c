@@ -1,7 +1,16 @@
+/* LibTomCrypt, modular cryptographic library -- Tom St Denis
+ *
+ * LibTomCrypt is a library that provides various cryptographic
+ * algorithms in a highly modular and flexible manner.
+ *
+ * The library is free for all purposes without any express
+ * guarantee it works.
+ */
+
 #include <types.h>
 #include <stdbool.h>
 #include <string.h>
-#include <sha256.h>
+#include <sha2.h>
 
 /* Various logical functions */
 #define RORc(x, y)      ( ((((unsigned long)(x)&0xFFFFFFFFUL)>>(unsigned long)((y)&31)) \
@@ -17,14 +26,14 @@
 #define Gamma1(x)       (S(x, 17) ^ S(x, 19) ^ R(x, 10))
 
 /* compress 512-bits */
-static int sha256_compress(sha256_state * md, unsigned char *buf)
+static int sha256_compress(hash_state * md, unsigned char *buf)
 {
     u32 S[8], W[64], t0, t1;
     int i;
 
     /* copy state into S */
     for (i = 0; i < 8; i++) {
-        S[i] = md->state[i];
+        S[i] = md->sha256.state[i];
     }
 
     /* copy the state into 512-bits into W[0..15] */
@@ -113,43 +122,41 @@ static int sha256_compress(sha256_state * md, unsigned char *buf)
     
     /* feedback */
     for (i = 0; i < 8; i++) {
-        md->state[i] = md->state[i] + S[i];
+        md->sha256.state[i] = md->sha256.state[i] + S[i];
     }
     return 0;
 }
 
-#define SHA256_BLOCK_SIZE   64
-#define MIN(x, y) ( ((x)<(y))?(x):(y) )
-int sha256_process(sha256_state * md, const unsigned char *in, unsigned long inlen)
+int sha256_process(hash_state * md, const unsigned char *in, u32 inlen)
 {
     unsigned long n;
     int           err;
 
     if (md == NULL || in == NULL)
         return -1;
-    if (md->curlen > sizeof(md->buf))
+    if (md->sha256.curlen > sizeof(md->sha256.buf))
         return -1;
 
     while (inlen > 0) {                                                          
-        if (md->curlen == 0 && inlen >= SHA256_BLOCK_SIZE) {
+        if (md->sha256.curlen == 0 && inlen >= SHA256_BLOCK_SIZE) {
             if ((err = sha256_compress(md, (unsigned char *)in)) != 0) {
                 return err;
             }
-            md->length += SHA256_BLOCK_SIZE * 8;          
+            md->sha256.length += SHA256_BLOCK_SIZE * 8;          
             in += SHA256_BLOCK_SIZE;                      
             inlen -= SHA256_BLOCK_SIZE;                      
         } else {                                              
-           n = MIN(inlen, (SHA256_BLOCK_SIZE - md->curlen));
-           tb_memcpy(md->buf + md->curlen, in, (size_t)n);
-           md->curlen += n;
+           n = MIN(inlen, (SHA256_BLOCK_SIZE - md->sha256.curlen));
+           tb_memcpy(md->sha256.buf + md->sha256.curlen, in, (size_t)n);
+           md->sha256.curlen += n;
            in += n;
            inlen -= n;
-           if (md->curlen == SHA256_BLOCK_SIZE) {
-              if ((err = sha256_compress(md, md->buf)) != 0) {
+           if (md->sha256.curlen == SHA256_BLOCK_SIZE) {
+              if ((err = sha256_compress(md, md->sha256.buf)) != 0) {
                  return err;
               }
-              md->length += 8*SHA256_BLOCK_SIZE;
-              md->curlen = 0;
+              md->sha256.length += 8*SHA256_BLOCK_SIZE;
+              md->sha256.curlen = 0;
            }
        }
     }
@@ -161,21 +168,23 @@ int sha256_process(sha256_state * md, const unsigned char *in, unsigned long inl
    @param md   The hash state you wish to initialize
    @return CRYPT_OK if successful
 */
-void sha256_init(sha256_state * md)
+int sha256_init(hash_state * md)
 {
     if (md == NULL)
-        return;
+        return -1;
 
-    md->curlen = 0;
-    md->length = 0;
-    md->state[0] = 0x6A09E667UL;
-    md->state[1] = 0xBB67AE85UL;
-    md->state[2] = 0x3C6EF372UL;
-    md->state[3] = 0xA54FF53AUL;
-    md->state[4] = 0x510E527FUL;
-    md->state[5] = 0x9B05688CUL;
-    md->state[6] = 0x1F83D9ABUL;
-    md->state[7] = 0x5BE0CD19UL;
+    md->sha256.curlen = 0;
+    md->sha256.length = 0;
+    md->sha256.state[0] = 0x6A09E667UL;
+    md->sha256.state[1] = 0xBB67AE85UL;
+    md->sha256.state[2] = 0x3C6EF372UL;
+    md->sha256.state[3] = 0xA54FF53AUL;
+    md->sha256.state[4] = 0x510E527FUL;
+    md->sha256.state[5] = 0x9B05688CUL;
+    md->sha256.state[6] = 0x1F83D9ABUL;
+    md->sha256.state[7] = 0x5BE0CD19UL;
+    
+    return 0;
 }
 
 /**
@@ -184,57 +193,60 @@ void sha256_init(sha256_state * md)
    @param out [out] The destination of the hash (32 bytes)
    @return 0 if successful
 */
-int sha256_done(sha256_state * md, unsigned char *out)
+int sha256_done(hash_state * md, unsigned char *out)
 {
     int i;
 
     if (md == NULL || out == NULL)
         return -1;
 
-    if (md->curlen >= sizeof(md->buf))
+    if (md->sha256.curlen >= sizeof(md->sha256.buf))
         return -1;
 
     /* increase the length of the message */
-    md->length += md->curlen * 8;
+    md->sha256.length += md->sha256.curlen * 8;
 
     /* append the '1' bit */
-    md->buf[md->curlen++] = (unsigned char)0x80;
+    md->sha256.buf[md->sha256.curlen++] = (unsigned char)0x80;
 
     /* if the length is currently above 56 bytes we append zeros
      * then compress.  Then we can fall back to padding zeros and length
      * encoding like normal.
      */
-    if (md->curlen > 56) {
-        while (md->curlen < 64) {
-            md->buf[md->curlen++] = (unsigned char)0;
+    if (md->sha256.curlen > 56) {
+        while (md->sha256.curlen < 64) {
+            md->sha256.buf[md->sha256.curlen++] = (unsigned char)0;
         }
-        sha256_compress(md, md->buf);
-        md->curlen = 0;
+        sha256_compress(md, md->sha256.buf);
+        md->sha256.curlen = 0;
     }
 
     /* pad upto 56 bytes of zeroes */
-    while (md->curlen < 56) {
-        md->buf[md->curlen++] = (unsigned char)0;
+    while (md->sha256.curlen < 56) {
+        md->sha256.buf[md->sha256.curlen++] = (unsigned char)0;
     }
 
     /* store length */
-    STORE64H(md->length, md->buf+56);
-    sha256_compress(md, md->buf);
+    STORE64H(md->sha256.length, md->sha256.buf+56);
+    sha256_compress(md, md->sha256.buf);
 
     /* copy output */
     for (i = 0; i < 8; i++) {
-        STORE32H(md->state[i], out+(4*i));
+        STORE32H(md->sha256.state[i], out+(4*i));
     }
 
     return 0;
 }
 
-void sha256_buffer(const unsigned char *buffer, size_t len,
+int sha256_buffer(const unsigned char *buffer, size_t len,
                   unsigned char hash[32])
 {
-    sha256_state md;
+    hash_state md;
+    int ret = 0;
 
-    sha256_init(&md);
-    sha256_process(&md, buffer, len);
-    sha256_done(&md, hash);
+    ret |= sha256_init(&md);
+    ret |= sha256_process(&md, buffer, len);
+    ret |= sha256_done(&md, hash);
+
+    return ret;
 }

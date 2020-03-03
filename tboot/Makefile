@@ -24,7 +24,7 @@ obj-y += common/vga.o common/vmac.o common/vsprintf.o common/lz.o
 obj-y += txt/acmod.o txt/errors.o txt/heap.o txt/mtrrs.o txt/txt.o
 obj-y += txt/verify.o txt/vmcs.o
 obj-y += common/tpm_12.o common/tpm_20.o 
-obj-y += common/sha256.o common/efi_memmap.o
+obj-y += common/sha256.o common/sha512.o common/sha384.o common/efi_memmap.o
 
 OBJS := $(obj-y)
 
