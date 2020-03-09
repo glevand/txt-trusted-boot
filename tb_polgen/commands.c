@@ -81,6 +81,14 @@ static bool hash_file(const char *filename, bool unzip, tb_hash_t *hash, uint16_
             md = EVP_sha256();
             hash_out = hash->sha256;
             break;
+        case TB_HALG_SHA384:
+            md = EVP_sha384();
+            hash_out = hash->sha384;
+            break;
+        case TB_HALG_SHA512:
+            md = EVP_sha512();
+            hash_out = hash->sha512;
+            break;
         default:
             error_msg("unsupported hash alg (%d)\n", hash_alg);
             return false;

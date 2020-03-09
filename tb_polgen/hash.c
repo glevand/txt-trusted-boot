@@ -67,6 +67,10 @@ bool are_hashes_equal(const tb_hash_t *hash1, const tb_hash_t *hash2,
             return (memcmp_s(hash1, SHA1_LENGTH, hash2, SHA1_LENGTH, &diff) == EOK && diff == 0);
         case TB_HALG_SHA256:
             return (memcmp_s(hash1, SHA256_LENGTH, hash2, SHA256_LENGTH, &diff) == EOK && diff == 0);
+        case TB_HALG_SHA384:
+            return (memcmp_s(hash1, SHA384_LENGTH, hash2, SHA384_LENGTH, &diff) == EOK && diff == 0);
+        case TB_HALG_SHA512:
+            return (memcmp_s(hash1, SHA512_LENGTH, hash2, SHA512_LENGTH, &diff) == EOK && diff == 0);
         default:
             error_msg("unsupported hash alg (%d)\n", hash_alg);
             return false;
@@ -99,6 +103,14 @@ bool hash_buffer(const unsigned char* buf, size_t size, tb_hash_t *hash,
         case TB_HALG_SHA256:
             md = EVP_sha256();
             hash_out = hash->sha256;
+            break;
+        case TB_HALG_SHA384:
+            md = EVP_sha384();
+            hash_out = hash->sha384;
+            break;
+        case TB_HALG_SHA512:
+            md = EVP_sha512();
+            hash_out = hash->sha512;
             break;
         default:
             error_msg("unsupported hash alg (%d)\n", hash_alg);
@@ -148,7 +160,27 @@ bool extend_hash(tb_hash_t *hash1, const tb_hash_t *hash2, uint16_t hash_alg)
         EVP_DigestUpdate(ctx, buf, 2*sizeof(hash1->sha256));
         EVP_DigestFinal(ctx, hash1->sha256, NULL);
         EVP_MD_CTX_destroy(ctx);
-    } else {
+    } else if ( hash_alg == TB_HALG_SHA384 ) {
+        memcpy_s(buf, sizeof(buf), &(hash1->sha384), sizeof(hash1->sha384));
+        memcpy_s(buf + sizeof(hash1->sha384), sizeof(buf) - sizeof(hash1->sha384),
+                 &(hash2->sha384), sizeof(hash1->sha384));
+        md = EVP_sha384();
+        EVP_DigestInit(ctx, md);
+        EVP_DigestUpdate(ctx, buf, 2*sizeof(hash1->sha384));
+        EVP_DigestFinal(ctx, hash1->sha384, NULL);
+        EVP_MD_CTX_destroy(ctx);
+    }
+    else if ( hash_alg == TB_HALG_SHA512 ) {
+        memcpy_s(buf, sizeof(buf), &(hash1->sha512), sizeof(hash1->sha512));
+        memcpy_s(buf + sizeof(hash1->sha512), sizeof(buf) - sizeof(hash1->sha512),
+                 &(hash2->sha512), sizeof(hash1->sha512));
+        md = EVP_sha512();
+        EVP_DigestInit(ctx, md);
+        EVP_DigestUpdate(ctx, buf, 2*sizeof(hash1->sha512));
+        EVP_DigestFinal(ctx, hash1->sha512, NULL);
+        EVP_MD_CTX_destroy(ctx);
+    }
+    else {
         error_msg("unsupported hash alg (%d)\n", hash_alg);
         return false;
     }
@@ -176,6 +208,18 @@ void print_hash(const tb_hash_t *hash, uint16_t hash_alg)
             }
             printf("\n");
             break;
+        case TB_HALG_SHA384:
+            for ( unsigned int i = 0; i < sizeof(hash->sha384); i++ ) {
+                printf("%02x ", hash->sha384[i]);
+            }
+            printf("\n");
+            break;
+        case TB_HALG_SHA512:
+            for ( unsigned int i = 0; i < sizeof(hash->sha512); i++ ) {
+                printf("%02x ", hash->sha512[i]);
+            }
+            printf("\n");
+            break;
         default:
             error_msg("unsupported hash alg (%d)\n", hash_alg);
     }
@@ -195,6 +239,12 @@ void copy_hash(tb_hash_t *dest_hash, const tb_hash_t *src_hash,
             break;
         case TB_HALG_SHA256:
             memcpy_s(dest_hash, SHA256_LENGTH, src_hash, SHA256_LENGTH);
+            break;
+        case TB_HALG_SHA384:
+            memcpy_s(dest_hash, SHA384_LENGTH, src_hash, SHA384_LENGTH);
+            break;
+        case TB_HALG_SHA512:
+            memcpy_s(dest_hash, SHA512_LENGTH, src_hash, SHA512_LENGTH);
             break;
         default:
             error_msg("unsupported hash alg (%d)\n", hash_alg);
