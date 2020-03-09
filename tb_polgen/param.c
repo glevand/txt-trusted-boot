@@ -51,7 +51,7 @@
 
 static const char *help[] = {
     "tb_polgen --create --type        nonfatal|continue|halt\n",
-    "                   [--alg        sha1 (default)|sha256]\n",
+    "                   [--alg        sha1 (default)|sha256|sha384|sha512]\n",
     "                   [--ctrl       <policy control value>]\n",
     "                   [--verbose]\n",
     "                   <policy file name>\n",
@@ -140,6 +140,8 @@ static option_table_t pcr_opts[] = {
 static option_table_t alg_opts[] = {
     {"sha1",         int_opt : TB_HALG_SHA1},
     {"sha256",       int_opt : TB_HALG_SHA256},
+    {"sha384",       int_opt : TB_HALG_SHA384},
+    {"sha512",       int_opt : TB_HALG_SHA512},
     {NULL}
 };
 
