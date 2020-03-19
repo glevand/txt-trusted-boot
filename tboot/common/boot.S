@@ -65,6 +65,27 @@
 /* errorcode for post-launch memory layout verfication failure */
 #define LAYOUT_ERR             0xc0008001
 
+#define sym_offs(sym)     ((sym) - TBOOT_BASE_ADDR)
+
+        .macro mb2ht_args arg:req, args:vararg
+        .long \arg
+        .ifnb \args
+        mb2ht_args \args
+        .endif
+        .endm
+
+        .macro mb2ht_init type:req, req:req, args:vararg
+        .balign MULTIBOOT2_TAG_ALIGN, 0xc2 /* Avoid padding with long nops. */
+.Lmb2ht_init_start\@:
+        .short \type
+        .short \req
+        .long .Lmb2ht_init_end\@ - .Lmb2ht_init_start\@
+        .ifnb \args
+        mb2ht_args \args
+        .endif
+.Lmb2ht_init_end\@:
+        .endm
+
 .section ".tboot_multiboot_header","w"
         .align 4
 /* multiboot header */
@@ -86,13 +107,177 @@ multiboot2_header:
         .long multiboot2_header_end - multiboot2_header
         /* checksum */
         .long -(MB2_HEADER_MAGIC + MB2_ARCH_X86 + (multiboot2_header_end - multiboot2_header))
-multiboot2_header_end:	
-        /* tag requests here--RLM, fix me!! Well, maybe! */
-        .short MB2_HDR_TAG_END
-        .short 0
-        .long 8
 
-	.text
+        /* Multiboot2 entry point. */
+        mb2ht_init MB2_HDR_TAG_ENTRY_ADDR, MB2_HDR_TAG_REQUIRED, start
+
+        /* The address tag. */
+        mb2ht_init MB2_HDR_TAG_ADDR, MB2_HDR_TAG_REQUIRED, \
+                   multiboot2_header, /* header_addr */ \
+                   _mle_start,        /* load_addr */ \
+                   __bss_start,       /* load_end_addr */ \
+                   _end               /* bss_end_addr */
+
+        /* Multiboot2 header end tag. */
+        mb2ht_init MB2_HDR_TAG_END, MB2_HDR_TAG_REQUIRED
+multiboot2_header_end:	
+
+        .size multiboot2_header, . - multiboot2_header
+        .type multiboot2_header, @object
+
+
+        /*
+         * Manually defined PE header, based on XEN version created by Daniel Kiper.
+         */
+.section ".tboot_efi_pe_header","w"
+        .align 4
+
+efi_pe_head:
+        /*
+         * Legacy EXE header.
+         *
+         * Most of it is copied from binutils package, version 2.30,
+         * include/coff/pe.h:struct external_PEI_filehdr and
+         * bfd/peXXigen.c:_bfd_XXi_only_swap_filehdr_out().
+         *
+         * Page is equal 512 bytes here.
+         * Paragraph is equal 16 bytes here.
+         */
+        .short  0x5a4d                               /* EXE magic number. */
+        .short  0x90                                 /* Bytes on last page of file. */
+        .short  0x3                                  /* Pages in file. */
+        .short  0                                    /* Relocations. */
+        .short  0x4                                  /* Size of header in paragraphs. */
+        .short  0                                    /* Minimum extra paragraphs needed. */
+        .short  0xffff                               /* Maximum extra paragraphs needed. */
+        .short  0                                    /* Initial (relative) SS value. */
+        .short  0xb8                                 /* Initial SP value. */
+        .short  0                                    /* Checksum. */
+        .short  0                                    /* Initial IP value. */
+        .short  0                                    /* Initial (relative) CS value. */
+        .short  0x40                                 /* File address of relocation table. */
+        .short  0                                    /* Overlay number. */
+        .fill   4, 2, 0                              /* Reserved words. */
+        .short  0                                    /* OEM identifier. */
+        .short  0                                    /* OEM information. */
+        .fill   10, 2, 0                             /* Reserved words. */
+        .long   pe_header - efi_pe_head              /* File address of the PE header. */
+
+        /*
+         * Standard/Minimal DOS code/data.
+         *
+         * It is copied from binutils package, version 2.30,
+         * include/coff/pe.h:struct external_PEI_filehdr and
+         * bfd/peXXigen.c:_bfd_XXi_only_swap_filehdr_out().
+         *
+         * Do not change DOS code/data size!!! Some buggy applications
+         * ignore PE header address from EXE header and look for PE header
+         * at 0x80 file offset. The size of this code assures that it is
+         * found at exactly that address.
+         */
+        .long   0x0eba1f0e
+        .long   0xcd09b400
+        .long   0x4c01b821
+        .long   0x685421cd
+        .long   0x70207369
+        .long   0x72676f72
+        .long   0x63206d61
+        .long   0x6f6e6e61
+        .long   0x65622074
+        .long   0x6e757220
+        .long   0x206e6920
+        .long   0x20534f44
+        .long   0x65646f6d
+        .long   0x0a0d0d2e
+        .long   0x24
+        .long   0
+
+        /*
+         * PE/COFF header.
+         *
+         * The PE/COFF format is defined by Microsoft, and is available from
+         * http://www.microsoft.com/whdc/system/platform/firmware/PECOFF.mspx
+         *
+         * Some ideas are taken from Linux kernel and Xen ARM64.
+         */
+
+pe_header:
+        .ascii  "PE\0\0"                             /* PE signature. */
+        .short  0x8664                               /* Machine: IMAGE_FILE_MACHINE_AMD64 */
+        .short  1                                    /* NumberOfSections. */
+        .long   0                                    /* TimeDateStamp. */
+        .long   0                                    /* PointerToSymbolTable. */
+        .long   0                                    /* NumberOfSymbols. */
+        .short  section_table - optional_header      /* SizeOfOptionalHeader. */
+        .short  0x226                                /* Characteristics:
+                                                      *   IMAGE_FILE_EXECUTABLE_IMAGE |
+                                                      *   IMAGE_FILE_LARGE_ADDRESS_AWARE |
+                                                      *   IMAGE_FILE_DEBUG_STRIPPED |
+                                                      *   IMAGE_FILE_LINE_NUMS_STRIPPED
+                                                      */
+
+optional_header:
+        .short  0x20b                                /* PE format: PE32+ */
+        .byte   0x02                                 /* MajorLinkerVersion. */
+        .byte   0x1e                                 /* MinorLinkerVersion. */
+        .long   __pe_text_raw_end - efi_pe_head_end              /* SizeOfCode. */
+        .long   0                                    /* SizeOfInitializedData. */
+        .long   0                                    /* SizeOfUninitializedData. */
+        .long   sym_offs(efi_start)                  /* AddressOfEntryPoint. */
+        .long   sym_offs(start)                      /* BaseOfCode. */
+        .quad   0                                    /* ImageBase. */
+        .long   4096                                 /* SectionAlignment. */
+        .long   4096                       /* FileAlignment. */
+        .short  2                                    /* MajorOperatingSystemVersion. */
+        .short  0                                    /* MinorOperatingSystemVersion. */
+        .short  0                          /* MajorImageVersion. */
+        .short  0                       /* MinorImageVersion. */
+        .short  2                                    /* MajorSubsystemVersion. */
+        .short  0                                    /* MinorSubsystemVersion. */
+        .long   0                                    /* Win32VersionValue. */
+        .long   __pe_SizeOfImage                     /* SizeOfImage. */
+        .long   efi_pe_head_end - efi_pe_head        /* SizeOfHeaders. */
+        .long   0                                    /* CheckSum. */
+        .short  0xa                                  /* Subsystem: EFI application. */
+        .short  0                                    /* DllCharacteristics. */
+        .quad   0                                    /* SizeOfStackReserve. */
+        .quad   0                                    /* SizeOfStackCommit. */
+        .quad   0                                    /* SizeOfHeapReserve. */
+        .quad   0                                    /* SizeOfHeapCommit. */
+        .long   0                                    /* LoaderFlags. */
+        .long   0x6                                  /* NumberOfRvaAndSizes. */
+
+        /* Data Directories. */
+        .quad   0                                    /* Export Table. */
+        .quad   0                                    /* Import Table. */
+        .quad   0                                    /* Resource Table. */
+        .quad   0                                    /* Exception Table. */
+        .quad   0                                    /* Certificate Table. */
+        .quad   0                                    /* Base Relocation Table. */
+
+section_table:
+        .ascii  ".text\0\0\0"                        /* Name. */
+        .long   __pe_text_raw_end - TBOOT_START  /* VirtualSize. */
+        .long   sym_offs(start)                      /* VirtualAddress. */
+        .long   __pe_text_raw_end - TBOOT_START  /* SizeOfRawData. */
+        .long   sym_offs(start)        /* PointerToRawData. */
+        .long   0                                    /* PointerToRelocations. */
+        .long   0                                    /* PointerToLinenumbers. */
+        .short  0                                    /* NumberOfRelocations. */
+        .short  0                                    /* NumberOfLinenumbers. */
+        .long   0xe0500020                           /* Characteristics:
+                                                      *   IMAGE_SCN_CNT_CODE |
+                                                      *   IMAGE_SCN_ALIGN_16BYTES |
+                                                      *   IMAGE_SCN_MEM_EXECUTE |
+                                                      *   IMAGE_SCN_MEM_READ |
+                                                      *   IMAGE_SCN_MEM_WRITE
+                                                      */
+
+        .align FILE_ALIGN
+
+efi_pe_head_end:
+
+        .text
 
 ENTRY(start)
 ENTRY(_start)

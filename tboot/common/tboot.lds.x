@@ -9,6 +9,8 @@
 #undef ENTRY
 #undef ALIGN
 
+#define MB(_mb)     ((_mb) << 20)
+
 OUTPUT_FORMAT("elf32-i386", "elf32-i386", "elf32-i386")
 OUTPUT_ARCH(i386)
 ENTRY(start)
@@ -21,6 +23,7 @@ SECTIONS
   . = TBOOT_BASE_ADDR;		/* 0x800000 */
 
   .text : {
+	*(.tboot_efi_pe_header)
 	*(.tboot_multiboot_header)
   . = ALIGN(4096);
 	*(.mlept)
@@ -43,6 +46,9 @@ SECTIONS
 	CONSTRUCTORS
 	}
 
+  . = ALIGN(FILE_ALIGN);
+    __pe_text_raw_end = .;
+
   . = ALIGN(4096);
 
   __bss_start = .;		/* BSS */
@@ -53,4 +59,5 @@ SECTIONS
 	}
 
   _end = . ;
+  __pe_SizeOfImage = ALIGN(. - TBOOT_BASE_ADDR, MB(16));
 }

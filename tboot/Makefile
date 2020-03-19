@@ -12,7 +12,7 @@ include $(CURDIR)/Config.mk
 TARGET := $(CURDIR)/tboot
 
 # boot.o must be first
-obj-y := common/boot.o
+obj-y := common/boot.o common/efi_stub.o
 obj-y += common/acpi.o common/cmdline.o common/com.o common/e820.o common/vtd.o
 obj-y += common/elf.o common/hash.o common/index.o common/integrity.o
 obj-y += common/linux.o common/loader.o common/memcmp.o common/memcpy.o
@@ -37,6 +37,9 @@ $(TARGET).strip : $(TARGET)
 $(TARGET).gz : $(TARGET).strip
 	gzip -n -f -9 < $< > $@
 
+$(TARGET).mb2 : $(TARGET).strip
+	$(OBJCOPY) -O binary $< $@
+
 $(TARGET) : $(OBJS) $(TARGET_LDS)
 	$(LD) $(LDFLAGS) -T $(TARGET_LDS) -N $(OBJS) -o $(@D)/.$(@F).0
 	$(NM) -n $(@D)/.$(@F).0 >$(TARGET)-syms
@@ -54,7 +57,7 @@ $(TARGET_LDS).x : FORCE
 dist : install
 
 
-build : $(TARGET).gz
+build : $(TARGET).gz $(TARGET).mb2
 
 
 install : $(DISTDIR)/boot/$(TARGET).gz
