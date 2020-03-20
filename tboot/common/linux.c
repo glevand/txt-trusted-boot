@@ -413,16 +413,16 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
     }
     
     /* detect e820 table */
-    if (have_loader_memmap(g_ldr_ctx)) {
+    if (get_nr_map() > 0) {
         int i;
 
-        memory_map_t *p = get_loader_memmap(g_ldr_ctx);
+        memory_map_t *p = get_e820_copy();
         if ( p == NULL ) {
             printk(TBOOT_ERR"Error: no memory map available\n");
             return false;
         }
         uint32_t memmap_start = (uint32_t) p;
-        uint32_t memmap_length = get_loader_memmap_length(g_ldr_ctx);
+        uint32_t memmap_length = get_nr_map() * sizeof(memory_map_t);
         for ( i = 0; (uint32_t)p < memmap_start + memmap_length; i++ )
         {
             boot_params->e820_map[i].addr = ((uint64_t)p->base_addr_high << 32)
