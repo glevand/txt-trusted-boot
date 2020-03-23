@@ -43,7 +43,7 @@ CFLAGS_WARN       = -Wall -Wformat-security -Werror -Wstrict-prototypes \
 	            -Wextra -Winit-self -Wswitch-default -Wunused-parameter \
 	            -Wwrite-strings \
 	            $(call cc-option,$(CC),-Wlogical-op,) \
-	            -Wno-missing-field-initializers
+	            -Wno-missing-field-initializers -Wno-address-of-packed-member
 
 AS         ?= as
 LD         ?= ld
