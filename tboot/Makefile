@@ -38,10 +38,8 @@ $(TARGET).gz : $(TARGET).strip
 	gzip -n -f -9 < $< > $@
 
 $(TARGET) : $(OBJS) $(TARGET_LDS)
-	$(LD) $(LDFLAGS) -T $(TARGET_LDS) -N $(OBJS) -o $(@D)/.$(@F).0
-	$(NM) -n $(@D)/.$(@F).0 >$(TARGET)-syms
-	$(LD) $(LDFLAGS) -T $(TARGET_LDS) $(LDFLAGS_STRIP) $(@D)/.$(@F).0 -o $(TARGET)
-	rm -f $(@D)/.$(@F).0
+	$(LD) $(LDFLAGS) -T $(TARGET_LDS) -N $(OBJS) -o $@
+	$(NM) -n $@ >$(TARGET)-syms
 
 $(TARGET_LDS) : $(TARGET_LDS).x $(HDRS)
 	$(CPP) -x c -P -E -Ui386 $(AFLAGS) -o $@ $<
