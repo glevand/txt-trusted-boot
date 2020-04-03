@@ -86,46 +86,6 @@
 .Lmb2ht_init_end\@:
         .endm
 
-.section ".tboot_multiboot_header","w"
-        .align 4
-/* multiboot header */
-multiboot_header:
-#define MULTIBOOT_HEADER_FLAGS (MULTIBOOT_HEADER_MODS_ALIGNED | \
-                                MULTIBOOT_HEADER_WANT_MEMORY)
-        /* magic number for multiboot header */
-        .long MULTIBOOT_HEADER_MAGIC
-        /* flags for bootloader */
-        .long MULTIBOOT_HEADER_FLAGS
-        /* checksum: negated sum of above */
-        .long -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
-
-/* multiboot2 header */
-        .align 8
-multiboot2_header:
-        .long MB2_HEADER_MAGIC
-        .long MB2_ARCH_X86
-        .long multiboot2_header_end - multiboot2_header
-        /* checksum */
-        .long -(MB2_HEADER_MAGIC + MB2_ARCH_X86 + (multiboot2_header_end - multiboot2_header))
-
-        /* Multiboot2 entry point. */
-        mb2ht_init MB2_HDR_TAG_ENTRY_ADDR, MB2_HDR_TAG_REQUIRED, start
-
-        /* The address tag. */
-        mb2ht_init MB2_HDR_TAG_ADDR, MB2_HDR_TAG_REQUIRED, \
-                   multiboot2_header, /* header_addr */ \
-                   _mle_start,        /* load_addr */ \
-                   __bss_start,       /* load_end_addr */ \
-                   _end               /* bss_end_addr */
-
-        /* Multiboot2 header end tag. */
-        mb2ht_init MB2_HDR_TAG_END, MB2_HDR_TAG_REQUIRED
-multiboot2_header_end:	
-
-        .size multiboot2_header, . - multiboot2_header
-        .type multiboot2_header, @object
-
-
         /*
          * Manually defined PE header, based on XEN version created by Daniel Kiper.
          */
@@ -220,18 +180,18 @@ optional_header:
         .short  0x20b                                /* PE format: PE32+ */
         .byte   0x02                                 /* MajorLinkerVersion. */
         .byte   0x1e                                 /* MinorLinkerVersion. */
-        .long   __pe_text_raw_end - efi_pe_head_end              /* SizeOfCode. */
+        .long   __pe_text_raw_end - efi_pe_head_end  /* SizeOfCode. */
         .long   0                                    /* SizeOfInitializedData. */
         .long   0                                    /* SizeOfUninitializedData. */
         .long   sym_offs(efi_start)                  /* AddressOfEntryPoint. */
         .long   sym_offs(start)                      /* BaseOfCode. */
         .quad   0                                    /* ImageBase. */
         .long   4096                                 /* SectionAlignment. */
-        .long   4096                       /* FileAlignment. */
+        .long   4096                                 /* FileAlignment. */
         .short  2                                    /* MajorOperatingSystemVersion. */
         .short  0                                    /* MinorOperatingSystemVersion. */
-        .short  0                          /* MajorImageVersion. */
-        .short  0                       /* MinorImageVersion. */
+        .short  0                                    /* MajorImageVersion. */
+        .short  0                                    /* MinorImageVersion. */
         .short  2                                    /* MajorSubsystemVersion. */
         .short  0                                    /* MinorSubsystemVersion. */
         .long   0                                    /* Win32VersionValue. */
@@ -257,10 +217,10 @@ optional_header:
 
 section_table:
         .ascii  ".text\0\0\0"                        /* Name. */
-        .long   __pe_text_raw_end - TBOOT_START  /* VirtualSize. */
-        .long   sym_offs(start)                      /* VirtualAddress. */
-        .long   __pe_text_raw_end - TBOOT_START  /* SizeOfRawData. */
-        .long   sym_offs(start)        /* PointerToRawData. */
+        .long   __pe_text_raw_end - efi_pe_head_end  /* VirtualSize. */
+        .long   sym_offs(efi_pe_head_end)            /* VirtualAddress. */
+        .long   __pe_text_raw_end - efi_pe_head_end  /* SizeOfRawData. */
+        .long   sym_offs(efi_pe_head_end)            /* PointerToRawData. */
         .long   0                                    /* PointerToRelocations. */
         .long   0                                    /* PointerToLinenumbers. */
         .short  0                                    /* NumberOfRelocations. */
@@ -273,9 +233,46 @@ section_table:
                                                       *   IMAGE_SCN_MEM_WRITE
                                                       */
 
-        .align FILE_ALIGN
-
 efi_pe_head_end:
+
+.section ".tboot_multiboot_header","w"
+        .align 4
+/* multiboot header */
+multiboot_header:
+#define MULTIBOOT_HEADER_FLAGS (MULTIBOOT_HEADER_MODS_ALIGNED | \
+                                MULTIBOOT_HEADER_WANT_MEMORY)
+        /* magic number for multiboot header */
+        .long MULTIBOOT_HEADER_MAGIC
+        /* flags for bootloader */
+        .long MULTIBOOT_HEADER_FLAGS
+        /* checksum: negated sum of above */
+        .long -(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS)
+
+/* multiboot2 header */
+        .align 8
+multiboot2_header:
+        .long MB2_HEADER_MAGIC
+        .long MB2_ARCH_X86
+        .long multiboot2_header_end - multiboot2_header
+        /* checksum */
+        .long -(MB2_HEADER_MAGIC + MB2_ARCH_X86 + (multiboot2_header_end - multiboot2_header))
+
+        /* Multiboot2 entry point. */
+        mb2ht_init MB2_HDR_TAG_ENTRY_ADDR, MB2_HDR_TAG_REQUIRED, start
+
+        /* The address tag. */
+        mb2ht_init MB2_HDR_TAG_ADDR, MB2_HDR_TAG_REQUIRED, \
+                   multiboot2_header, /* header_addr */ \
+                   _mle_start,        /* load_addr */ \
+                   __bss_start,       /* load_end_addr */ \
+                   _end               /* bss_end_addr */
+
+        /* Multiboot2 header end tag. */
+        mb2ht_init MB2_HDR_TAG_END, MB2_HDR_TAG_REQUIRED
+multiboot2_header_end:	
+
+        .size multiboot2_header, . - multiboot2_header
+        .type multiboot2_header, @object
 
         .text
 
