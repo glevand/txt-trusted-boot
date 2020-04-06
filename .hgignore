@@ -55,3 +55,4 @@
 ^utils/acminfo$
 ^utils/txt-stat$
 ^utils/parse_err$
+^doxygen/
