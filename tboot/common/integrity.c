@@ -45,9 +45,10 @@
 #include <tboot.h>
 #include <tb_policy.h>
 #include <tb_error.h>
-#include <vmac.h>
+#include <poly1305.h>
 #include <integrity.h>
 #include <tpm.h>
+#include <processor.h>
 
 #include <page.h>
 #include <paging.h>
@@ -80,7 +81,7 @@ extern void apply_policy(tb_error_t error);
 extern bool evtlog_append(uint8_t pcr, hash_list_t *hl, uint32_t type);
 
 typedef struct {
-    uint8_t mac_key[VMAC_KEY_LEN/8];
+    uint8_t mac_key[POLY1305_KEY_SIZE];
     uint8_t shared_key[sizeof(_tboot_shared.s3_key)];
 } sealed_secrets_t;
 
@@ -258,23 +259,24 @@ bool seal_pre_k_state(void)
     return false;
 }
 
-static bool measure_memory_integrity(vmac_t *mac, uint8_t key[VMAC_KEY_LEN/8])
+static bool measure_memory_integrity(uint8_t* mac, uint8_t* key)
 {
-    vmac_ctx_t ctx;
-    uint8_t nonce[16] = {};
+    POLY1305 ctx;
     unsigned long virt = MAC_VIRT_START;
 
 /* we require memory is 4K page aligned in tboot */
 #define MAC_ALIGN PAGE_SIZE
     COMPILE_TIME_ASSERT(MAC_VIRT_SIZE >= MAC_PAGE_SIZE);
     COMPILE_TIME_ASSERT((unsigned long)(-1) - MAC_VIRT_START > MAC_VIRT_SIZE );
-    COMPILE_TIME_ASSERT(PAGE_SIZE % VMAC_NHBYTES == 0);
+    COMPILE_TIME_ASSERT(PAGE_SIZE % POLY1305_BLOCK_SIZE == 0);
 
     /* enable paging */
     if ( !enable_paging() )
         return false;
 
-    vmac_set_key(key, &ctx);
+    sse_enable();
+
+    Poly1305_Init(&ctx, key);
     for ( unsigned int i = 0; i < _tboot_shared.num_mac_regions; i++ ) {
         uint64_t start = _tboot_shared.mac_regions[i].start;
 
@@ -349,22 +351,19 @@ static bool measure_memory_integrity(vmac_t *mac, uint8_t key[VMAC_KEY_LEN/8])
 
             /* MAC the 2-Mbyte pages */
             while ( (vend > vstart) && ((vend - vstart) >= MAC_PAGE_SIZE) ) {
-                vmac_update((uint8_t *)(uintptr_t)vstart, MAC_PAGE_SIZE, &ctx);
+                Poly1305_Update(&ctx, (uint8_t *)(uintptr_t)vstart, MAC_PAGE_SIZE);
                 vstart += MAC_PAGE_SIZE;
             }
             /* MAC the rest */
             if ( vend > vstart )
-                vmac_update((uint8_t *)(uintptr_t)vstart, vend - vstart, &ctx);
+                Poly1305_Update(&ctx, (uint8_t *)(uintptr_t)vstart, vend - vstart);
 
             /* destroy the mapping */
             if ( virt == MAC_VIRT_START )
                 destroy_tboot_mapping(MAC_VIRT_START, MAC_VIRT_END);
         } while ( start < end );
     }
-    *mac = vmac(NULL, 0, nonce, NULL, &ctx);
-
-    /* wipe ctx to ensure key not left in memory */
-    tb_memset(&ctx, 0, sizeof(ctx));
+    Poly1305_Final(&ctx, mac);
 
     /* return to protected mode without paging */
     if (!disable_paging())
@@ -418,8 +417,8 @@ bool verify_integrity(void)
         goto error;
 
     /* Verify memory integrity against sealed value */
-    vmac_t mac;
-    if ( !measure_memory_integrity(&mac, secrets.mac_key) )
+    uint8_t mac[POLY1305_DIGEST_SIZE];
+    if ( !measure_memory_integrity(mac, secrets.mac_key) )
         goto error;
     if ( tb_memcmp(&mac, &g_post_k_s3_state.kernel_integ, sizeof(mac)) ) {
         printk(TBOOT_INFO"memory integrity lost on S3 resume\n");
@@ -480,7 +479,7 @@ bool seal_post_k_state(void)
     uint32_t key_size = sizeof(secrets.mac_key);
     /* key must be random and secret even though auth not necessary */
     if ( !tpm_fp->get_random(tpm, tpm->cur_loc, secrets.mac_key, &key_size) ||key_size != sizeof(secrets.mac_key) ) return false;
-    if ( !measure_memory_integrity(&g_post_k_s3_state.kernel_integ, secrets.mac_key) ) return false;
+    if ( !measure_memory_integrity(g_post_k_s3_state.kernel_integ, secrets.mac_key) ) return false;
 
     /* copy s3_key into secrets to be sealed */
     tb_memcpy(secrets.shared_key, _tboot_shared.s3_key, sizeof(secrets.shared_key));

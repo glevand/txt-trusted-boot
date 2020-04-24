@@ -96,6 +96,19 @@
 
 #ifndef __ASSEMBLY__
 
+static inline void sse_enable(void)
+{
+    asm volatile (
+        "mov %cr0, %eax    \n"
+        "and $0xFFFB, %ax  \n"
+        "or $0x2, %ax      \n"
+        "mov %eax, %cr0    \n"
+        "mov %cr4, %eax    \n"
+        "or $(3 << 9), %ax \n"
+        "mov %eax, %cr4"
+    );
+}
+
 /* from:
  * $FreeBSD: src/sys/i386/include/cpufunc.h,v 1.158 2010/01/01 20:55:11 obrien Exp $
  */
