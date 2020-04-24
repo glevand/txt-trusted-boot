@@ -180,7 +180,7 @@ extern acm_hdr_t *copy_racm(const acm_hdr_t *racm);
 extern bool verify_racm(const acm_hdr_t *acm_hdr);
 extern bool is_sinit_acmod(const void *acmod_base, uint32_t acmod_size, bool quiet);
 extern bool does_acmod_match_platform(const acm_hdr_t* hdr);
-extern acm_hdr_t *copy_sinit(const acm_hdr_t *sinit);
+extern acm_hdr_t *copy_sinit(const acm_hdr_t *sinit, bool sinit_present);
 extern bool verify_acmod(const acm_hdr_t *acm_hdr);
 extern uint32_t get_supported_os_sinit_data_ver(const acm_hdr_t* hdr);
 extern txt_caps_t get_sinit_capabilities(const acm_hdr_t* hdr);

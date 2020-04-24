@@ -33,6 +33,7 @@
 /* $FreeBSD: src/sys/powerpc/powerpc/bcopy.c,v 1.5.24.1 2010/02/10 00:26:20 kensmith Exp $ */
 
 #include <string.h>
+#include <stdbool.h>
 
 /*
  * sizeof(word) MUST BE A POWER OF TWO
@@ -48,7 +49,13 @@ typedef	int	word;		/* "word" used for optimal copy speed */
  * This is the routine that actually implements
  * (the portable versions of) bcopy, memcpy, and memmove.
  */
-void *tb_memcpy(void *dst0, const void *src0, size_t length)
+
+inline void *tb_memcpy(void *dst0, const void *src0, size_t length)
+{
+	return tb_memcpy_ext(dst0, src0, length, false);
+}
+
+void *tb_memcpy_ext(void *dst0, const void *src0, size_t length, bool allow_null)
 {
 	char		*dst;
 	const char	*src;
@@ -57,8 +64,11 @@ void *tb_memcpy(void *dst0, const void *src0, size_t length)
 	dst = dst0;
 	src = src0;
 
-	if (dst0 == NULL || src0 == NULL)
-		return NULL;
+	if (!allow_null) {
+		if (dst0 == NULL || src0 == NULL) {
+			return NULL;
+		}
+	}
 	if (length == 0 || dst == src) {	/* nothing to do */
 		goto done;
 	}

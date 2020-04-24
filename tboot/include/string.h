@@ -38,6 +38,7 @@
 
 #include <stdarg.h>
 #include <types.h>
+#include <stdbool.h>
 
 int	 tb_memcmp(const void *b1, const void *b2, size_t len);
 char	*tb_index(const char *, int);
@@ -46,6 +47,7 @@ size_t	 tb_strlen(const char *);
 int	 tb_strncmp(const char *, const char *, size_t);
 char	*tb_strncpy(char * __restrict, const char * __restrict, size_t);
 void	*tb_memcpy(void *dst, const void *src, size_t len);
+void *tb_memcpy_ext(void *dst0, const void *src0, size_t length, bool allow_null);
 int	 tb_snprintf(char *buf, size_t size, const char *fmt, ...);
 int	 tb_vscnprintf(char *buf, size_t size, const char *fmt, va_list ap);
 unsigned long tb_strtoul(const char *nptr, char **endptr, int base);

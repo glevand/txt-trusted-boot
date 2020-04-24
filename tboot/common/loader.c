@@ -368,7 +368,7 @@ grow_mb2_tag(loader_ctx *lctx, struct mb2_tag *which, uint32_t how_much)
     return true;
 }
 
-static void *remove_module(loader_ctx *lctx, void *mod_start)
+static void *remove_module(loader_ctx *lctx, const module_t *m_orig)
 {
     module_t *m = NULL;
     unsigned int i;
@@ -378,7 +378,7 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
 
     for ( i = 0; i < get_module_count(lctx); i++ ) {
         m = get_module(lctx, i);
-        if ( mod_start == NULL || (void *)m->mod_start == mod_start )
+        if ( m_orig == NULL || m->mod_start == m_orig->mod_start )
             break;
     }
 
@@ -393,10 +393,13 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
         /* if we're removing the first module (i.e. the "kernel") then */
         /* need to adjust some mbi fields as well */
         multiboot_info_t *mbi = (multiboot_info_t *) lctx->addr;
-        if ( mod_start == NULL ) {
+        void *mod_start;
+        if ( m_orig == NULL ) {
             mbi->cmdline = m->string;
             mbi->flags |= MBI_CMDLINE;
             mod_start = (void *)m->mod_start;
+        } else {
+            mod_start = (void*)m_orig->mod_start;
         }
 
         /* copy remaing mods down by one */
@@ -412,7 +415,8 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
         /* need to adjust some mbi fields as well */
         char cmdbuf[TBOOT_KERNEL_CMDLINE_SIZE];
         cmdbuf[0] = '\0';
-        if ( mod_start == NULL ) {
+        void *mod_start;
+        if ( m_orig == NULL ) {
             char *cmdline = get_cmdline(lctx);
             char *mod_string = get_module_cmd(lctx, m);
             if ( cmdline == NULL ) {
@@ -452,6 +456,8 @@ static void *remove_module(loader_ctx *lctx, void *mod_start)
                  */
             }
             mod_start = (void *)m->mod_start;
+        } else {
+            mod_start = (void *)m_orig->mod_start;
         }
         /* so MB2 is a different beast.  The modules aren't necessarily
          * adjacent, first, last, anything.  What we can do is bulk copy
@@ -534,27 +540,17 @@ bool is_kernel_linux(void)
     return !is_elf_image(kernel_image, kernel_size);
 }
 
-static bool 
-find_module(loader_ctx *lctx, void **base, size_t *size,
-            const void *data, size_t len)
+static module_t*
+find_module(loader_ctx *lctx, const void *data, size_t len)
 {
     if ( lctx == NULL || lctx->addr == NULL) {
         printk(TBOOT_ERR"Error: context pointer is zero.\n");
-        return false;
+        return NULL;
     }
-
-    if ( base == NULL ) {
-        printk(TBOOT_ERR"Error: base is NULL.\n");
-        return false;
-    }
-
-    *base = NULL;
-    if ( size != NULL )
-        *size = 0;
 
     if ( 0 == get_module_count(lctx)) {
         printk(TBOOT_ERR"Error: no module.\n");
-        return false;
+        return NULL;
     }
 
     for ( unsigned int i = get_module_count(lctx) - 1; i > 0; i-- ) {
@@ -563,40 +559,30 @@ find_module(loader_ctx *lctx, void **base, size_t *size,
         size_t mod_size = m->mod_end - m->mod_start;
         if ( len > mod_size ) {
             printk(TBOOT_ERR"Error: image size is smaller than data size.\n");
-            return false;
+            return NULL;
         }
         if ( tb_memcmp((void *)m->mod_start, data, len) == 0 ) {
-            *base = (void *)m->mod_start;
-            if ( size != NULL )
-                *size = mod_size;
-            return true;
+            return m;
         }
     }
 
-    return false;
+    return NULL;
 }
 
-bool 
-find_lcp_module(loader_ctx *lctx, void **base, uint32_t *size)
+module_t*
+find_lcp_module(loader_ctx *lctx)
 {
-    size_t size2 = 0;
-    void *base2 = NULL;
-
-    if ( base != NULL )
-        *base = NULL;
-    if ( size != NULL )
-        *size = 0;
+    module_t *m;
 
     /* try policy data file for old version (0x00 or 0x01) */
-    find_module_by_uuid(lctx, &base2, &size2, &((uuid_t)LCP_POLICY_DATA_UUID));
+    m = find_module_by_uuid(lctx, &((uuid_t)LCP_POLICY_DATA_UUID));
 
     /* not found */
-    if ( base2 == NULL ) {
+    if ( m == NULL ) {
         /* try policy data file for new version (0x0202) */
-        find_module_by_file_signature(lctx, &base2, &size2,
-                                      LCP_POLICY_DATA_FILE_SIGNATURE);
+        m = find_module_by_file_signature(lctx, LCP_POLICY_DATA_FILE_SIGNATURE);
 
-        if ( base2 == NULL ) {
+        if ( m == NULL ) {
             printk(TBOOT_WARN"no LCP module found\n");
             return false;
         }
@@ -606,12 +592,7 @@ find_lcp_module(loader_ctx *lctx, void **base, uint32_t *size)
     else
         printk(TBOOT_INFO"v1 LCP policy data found\n");
 
-
-    if ( base != NULL )
-        *base = base2;
-    if ( size != NULL )
-        *size = size2;
-    return true;
+    return m;
 }
 
 /*
@@ -632,7 +613,7 @@ remove_txt_modules(loader_ctx *lctx)
 
         if ( is_sinit_acmod(base, m->mod_end - (unsigned long)base, true) ) {
             printk(TBOOT_INFO"got sinit match on module #%d\n", i);
-            if ( remove_module(lctx, base) == NULL ) {
+            if ( remove_module(lctx, m) == NULL ) {
                 printk(TBOOT_ERR
                        "failed to remove SINIT module from module list\n");
                 return false;
@@ -640,9 +621,9 @@ remove_txt_modules(loader_ctx *lctx)
         }
     }
 
-    void *base = NULL;
-    if ( find_lcp_module(lctx, &base, NULL) ) {
-        if ( remove_module(lctx, base) == NULL ) {
+    module_t *m = find_lcp_module(lctx);
+    if ( m != NULL ) {
+        if ( remove_module(lctx, m) == NULL ) {
             printk(TBOOT_ERR"failed to remove LCP module from module list\n");
             return false;
         }
@@ -814,10 +795,9 @@ bool launch_kernel(bool is_measured_launch)
  * find a module by its uuid
  *
  */
-bool find_module_by_uuid(loader_ctx *lctx, void **base, size_t *size,
-                         const uuid_t *uuid)
+module_t* find_module_by_uuid(loader_ctx *lctx, const uuid_t *uuid)
 {
-    return find_module(lctx, base, size, uuid, sizeof(*uuid));
+    return find_module(lctx, uuid, sizeof(*uuid));
 }
 
 /*
@@ -826,12 +806,10 @@ bool find_module_by_uuid(loader_ctx *lctx, void **base, size_t *size,
  * find a module by its file signature
  *
  */
-bool 
-find_module_by_file_signature(loader_ctx *lctx, void **base,
-                              size_t *size, const char* file_signature)
+module_t* find_module_by_file_signature(loader_ctx *lctx,
+                                        const char* file_signature)
 {
-    return find_module(lctx, base, size, 
-                       file_signature, tb_strlen(file_signature));
+    return find_module(lctx, file_signature, tb_strlen(file_signature));
 }
 
 bool 

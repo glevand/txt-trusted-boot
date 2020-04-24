@@ -395,13 +395,18 @@ void begin_launch(void *addr, uint32_t magic)
     /* has already been launched */
 
     if (g_sinit == NULL) {
-       find_platform_sinit_module(g_ldr_ctx, (void **)&g_sinit, NULL);
-       /* check if it is newer than BIOS provided version, then copy it to BIOS reserved region */
-       g_sinit = copy_sinit(g_sinit); 
-       if (g_sinit == NULL) 
-           apply_policy(TB_ERR_SINIT_NOT_PRESENT);
-       if (!verify_acmod(g_sinit)) 
-           apply_policy(TB_ERR_ACMOD_VERIFY_FAILED);
+        /* 
+         * GRUB may allocate SINIT at address 0, remember to handle that
+         * situation properly.
+        */
+        bool sinit_present = find_platform_sinit_module(g_ldr_ctx,
+                                                        (void **)&g_sinit, NULL);
+        /* check if it is newer than BIOS provided version, then copy it to BIOS reserved region */
+        g_sinit = copy_sinit(g_sinit, sinit_present); 
+        if (g_sinit == NULL) 
+            apply_policy(TB_ERR_SINIT_NOT_PRESENT);
+        if (!verify_acmod(g_sinit)) 
+            apply_policy(TB_ERR_ACMOD_VERIFY_FAILED);
     }
     
     /* make TPM ready for measured launch */
