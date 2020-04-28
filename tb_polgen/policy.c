@@ -220,7 +220,8 @@ bool add_hash(tb_policy_entry_t *pol_entry, const tb_hash_t *hash)
     unsigned char *entry_end = (unsigned char *)pol_entry + sizeof(*pol_entry)
                                + (pol_entry->num_hashes * hash_size);
     unsigned char *pol_end = _policy_buf + pol_size;
-    memmove(entry_end + hash_size, entry_end, pol_end - entry_end);
+    memmove_s(entry_end + hash_size, pol_end - entry_end,
+            entry_end, pol_end - entry_end);
 
     copy_hash((tb_hash_t *)entry_end, hash, g_policy->hash_alg);
     pol_entry->num_hashes++;
@@ -237,7 +238,8 @@ bool del_hash(tb_policy_entry_t *pol_entry, int i)
 
     void *start = get_policy_entry_hash(pol_entry, g_policy->hash_alg, i);
     size_t size = get_hash_size(g_policy->hash_alg);
-    memmove(start, start + size, calc_policy_size(g_policy) - size);
+    memmove_s(start, calc_policy_size(g_policy), 
+            start + size, calc_policy_size(g_policy) - size);
 
     pol_entry->num_hashes--;
 
@@ -251,7 +253,8 @@ bool del_entry(tb_policy_entry_t *pol_entry)
 
     void *start = pol_entry;
     size_t size = calc_policy_entry_size(pol_entry, g_policy->hash_alg);
-    memmove(start, start + size, calc_policy_size(g_policy) - size);
+    memmove_s(start, calc_policy_size(g_policy),
+            start + size, calc_policy_size(g_policy) - size);
 
     g_policy->num_entries--;
 

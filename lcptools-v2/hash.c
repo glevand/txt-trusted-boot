@@ -183,15 +183,15 @@ void print_hash(const tb_hash_t *hash, uint16_t hash_alg)
  */
 bool import_hash(const char *string, tb_hash_t *hash, uint16_t alg)
 {
-    size_t string_len = strlen(string);
     size_t hash_len = get_hash_size(alg);
+    size_t string_len = strnlen(string, hash_len * 2 + 1);
     unsigned int iter_a, iter_b;
     char byte[3] = {0, 0, 0};
 
     for (iter_a = 0, iter_b = 0;
          iter_a < string_len && iter_b <= hash_len;
          iter_a += 2, iter_b++) {
-        memcpy(byte, &string[iter_a], 2);
+        memcpy_s(byte, sizeof(byte), &string[iter_a], 2);
         hash->sha1[iter_b] = strtol(byte, NULL, 16);
     }
     if (iter_a != string_len || iter_b != hash_len)

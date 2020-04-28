@@ -358,7 +358,8 @@ lcp_policy_list_t2 *add_tpm20_policy_element(lcp_policy_list_t2 *pollist,
     /* realloc() copies over previous contents */
     /* we add at the beginning of the elements list (don't want to overwrite
        a signature) */
-    memmove((void *)&new_pollist->policy_elements + elt->size,
+    memmove_s((void *)&new_pollist->policy_elements + elt->size,
+            old_size - offsetof(lcp_policy_list_t2, policy_elements),
             &new_pollist->policy_elements,
             old_size - offsetof(lcp_policy_list_t2, policy_elements));
     memcpy_s(&new_pollist->policy_elements, elt->size, elt, elt->size);
@@ -381,7 +382,7 @@ bool del_tpm20_policy_element(lcp_policy_list_t2 *pollist, uint32_t type)
             /* move everything up */
             size_t tot_size = get_tpm20_policy_list_size(pollist);
             size_t elt_size = elt->size;
-            memmove(elt, (void *)elt + elt_size,
+            memmove_s(elt, pollist->policy_elements_size, (void *)elt + elt_size,
                     tot_size - ((void *)elt + elt_size - (void *)pollist));
             pollist->policy_elements_size -= elt_size;
 
