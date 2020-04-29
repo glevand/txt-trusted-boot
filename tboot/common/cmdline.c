@@ -83,7 +83,7 @@ static const cmdline_option_t g_tboot_cmdline_options[] = {
     { "min_ram", "0" },              /* size in bytes | 0 for no min */
     { "call_racm", "false" },        /* true|false|check */
     { "measure_nv", "false" },       /* true|false */
-    { "extpol",    "sha1" },         /*agile|embedded|sha1|sha256|sm3|... */
+    { "extpol",    "sha256" },         /*agile|embedded|sha1|sha256|sm3|... */
     { "ignore_prev_err", "true"},    /* true|false */
     { "force_tpm2_legacy_log", "false"}, /* true|false */
     { "save_vtd", "false"},          /* true|false */

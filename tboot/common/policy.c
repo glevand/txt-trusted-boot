@@ -137,7 +137,7 @@ static uint8_t _policy_index_buf[MAX_POLICY_SIZE];
 static const tb_policy_t _def_policy = {
     version        : 2,
     policy_type    : TB_POLTYPE_CONT_NON_FATAL,
-    hash_alg       : TB_HALG_SHA1,
+    hash_alg       : TB_HALG_SHA256,
     policy_control : TB_POLCTL_EXTEND_PCR17,
     num_entries    : 3,
     entries        : {
@@ -167,7 +167,7 @@ static const tb_policy_t _def_policy = {
 static const tb_policy_t _def_policy_da = {
     version        : 2,
     policy_type    : TB_POLTYPE_CONT_NON_FATAL,
-    hash_alg       : TB_HALG_SHA1,
+    hash_alg       : TB_HALG_SHA256,
     policy_control : TB_POLCTL_EXTEND_PCR17,
     num_entries    : 3,
     entries        : {
