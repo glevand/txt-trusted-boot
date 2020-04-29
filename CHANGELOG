@@ -1,3 +1,15 @@
+20200429: v1.9.12
+        Release localities in S3 flow for CRB interface
+        Config.mk, safestringlib/makefile : allow tool overrides
+        safestringlib: fix warnings with GCC 6.4.0
+        Strip executable file before generating tboot.gz
+        Add support for EFI memory map parse/modification
+        Add SHA384 and SHA512 digest algorithms
+        lcptools-v2: add pconf2 policy element support
+        tb_polgen: Add SHA384 and SHA512 support
+        Disable GCC9 address-of-packed-member warning
+        Fix warnings after "Avoid unsafe functions" scan
+        Use SHA256 as default hashing algorithm
 20191125: v1.9.11
         tb_polgen: Add support for SHA256
         Configure IOMMU before executing GETSEC[SENTER]
