@@ -36,6 +36,8 @@ CFLAGS		+= $(call cc-option,$(CC),-fno-stack-check,)
 # changeset variable for banner
 CFLAGS		+= -DTBOOT_CHANGESET=\""$(shell (hg parents --template "{latesttag} {date|isodate} {rev}:{node|short}" || echo "$(RELEASETIME) $(RELEASEVER)") 2>/dev/null)"\"
 
+# flags for OpenSSL
+CFLAGS		+= -DPOLY1305_ASM -DOPENSSL_IA32_SSE2
 
 AFLAGS		+= -D__ASSEMBLY__
 

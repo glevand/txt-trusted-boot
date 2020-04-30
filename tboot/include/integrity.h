@@ -37,8 +37,7 @@
 #ifndef _TBOOT_INTEGRITY_H_
 #define _TBOOT_INTEGRITY_H_
 
-#include <vmac.h>
-#include <hash.h>
+#include <poly1305.h>
 
 /*
  * state that must be saved across S3 and will be sealed for integrity
@@ -81,7 +80,7 @@ typedef struct {
  */
 typedef struct {
     uint64_t kernel_s3_resume_vector;
-    vmac_t   kernel_integ;
+    uint8_t  kernel_integ[POLY1305_DIGEST_SIZE];
 } post_k_s3_state_t;
 
 

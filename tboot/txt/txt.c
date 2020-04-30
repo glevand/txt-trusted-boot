@@ -627,10 +627,11 @@ static txt_heap_t *init_txt_heap(void *ptab_base, acm_hdr_t *sinit, loader_ctx *
     set_vtd_pmrs(os_sinit_data, min_lo_ram, max_lo_ram, min_hi_ram,
                  max_hi_ram);
     /* LCP owner policy data */
-    void *lcp_base = NULL;
-    uint32_t lcp_size = 0;
+    module_t *m = find_lcp_module(lctx);
 
-    if ( find_lcp_module(lctx, &lcp_base, &lcp_size) && lcp_size > 0 ) {
+    if ( m != NULL && m->mod_start != m->mod_end ) {
+        void *lcp_base = (void*)m->mod_start;
+        uint32_t lcp_size = m->mod_end - m->mod_start;
         /* copy to heap */
         if ( lcp_size > sizeof(os_mle_data->lcp_po_data) ) {
             printk(TBOOT_ERR"LCP owner policy data file is too large (%u)\n",

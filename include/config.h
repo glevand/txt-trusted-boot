@@ -39,6 +39,8 @@
  * build/support flags
  */
 
+#define FILE_ALIGN 0x20
+
 /* address tboot will load and execute at */
 #define TBOOT_START              0x0804000
 

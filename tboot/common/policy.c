@@ -277,9 +277,17 @@ static bool unwrap_lcp_policy(void)
     }
     else {
         extern loader_ctx *g_ldr_ctx;
-        if ( !find_lcp_module(g_ldr_ctx, &lcp_base, &lcp_size) )
+        module_t *m = find_lcp_module(g_ldr_ctx);
+        if (m == NULL) {
             return false;
+        } else {
+            lcp_base = (void*)m->mod_start;
+            lcp_size = m->mod_end - m->mod_start;
+        }
     }
+
+    //TODO: check size
+    (void)lcp_size;
 
     /* if lcp policy data version is 2+ */
     if ( tb_memcmp((void *)lcp_base, LCP_POLICY_DATA_FILE_SIGNATURE,

@@ -717,7 +717,7 @@ acm_hdr_t *copy_racm(const acm_hdr_t *racm)
     return (acm_hdr_t *)racm_region_base;
 }
 
-acm_hdr_t *copy_sinit(const acm_hdr_t *sinit)
+acm_hdr_t *copy_sinit(const acm_hdr_t *sinit, bool sinit_present)
 {
     /* get BIOS-reserved region from TXT.SINIT.BASE config reg */
     void *sinit_region_base =
@@ -732,7 +732,7 @@ acm_hdr_t *copy_sinit(const acm_hdr_t *sinit)
     acm_hdr_t *bios_sinit = get_bios_sinit(sinit_region_base);
     if ( bios_sinit != NULL ) {
         /* no other SINIT was provided so must use one BIOS provided */
-        if ( sinit == NULL ) {
+        if ( !sinit_present ) {
             printk(TBOOT_WARN"no SINIT provided by bootloader; using BIOS SINIT\n");
             return bios_sinit;
         }
@@ -748,7 +748,7 @@ acm_hdr_t *copy_sinit(const acm_hdr_t *sinit)
     /* our SINIT is newer than BIOS's (or BIOS did not have one) */
 
     /* BIOS SINIT not present or not valid and none provided */
-    if ( sinit == NULL )
+    if ( !sinit_present )
         return NULL;
 
     /* overflow? */
@@ -768,7 +768,7 @@ acm_hdr_t *copy_sinit(const acm_hdr_t *sinit)
        return NULL;
 
     /* copy it there */
-    tb_memcpy(sinit_region_base, sinit, sinit->size*4);
+    tb_memcpy_ext(sinit_region_base, sinit, sinit->size*4, true);
 
     printk(TBOOT_DETA"copied SINIT (size=%x) to %p\n", sinit->size*4,
            sinit_region_base);

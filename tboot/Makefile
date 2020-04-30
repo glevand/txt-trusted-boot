@@ -12,19 +12,21 @@ include $(CURDIR)/Config.mk
 TARGET := $(CURDIR)/tboot
 
 # boot.o must be first
-obj-y := common/boot.o
+obj-y := common/boot.o common/efi_stub.o
 obj-y += common/acpi.o common/cmdline.o common/com.o common/e820.o common/vtd.o
 obj-y += common/elf.o common/hash.o common/index.o common/integrity.o
 obj-y += common/linux.o common/loader.o common/memcmp.o common/memcpy.o
 obj-y += common/misc.o common/mutex.o common/paging.o common/pci_cfgreg.o
-obj-y += common/policy.o common/printk.o common/rijndael.o common/sha1.o
+obj-y += common/policy.o common/printk.o common/sha1.o
 obj-y += common/strcmp.o common/strlen.o common/strncmp.o common/strncpy.o
 obj-y += common/strtoul.o common/tb_error.o common/tboot.o common/tpm.o
-obj-y += common/vga.o common/vmac.o common/vsprintf.o common/lz.o
+obj-y += common/vga.o common/vsprintf.o common/lz.o
 obj-y += txt/acmod.o txt/errors.o txt/heap.o txt/mtrrs.o txt/txt.o
 obj-y += txt/verify.o txt/vmcs.o
 obj-y += common/tpm_12.o common/tpm_20.o 
 obj-y += common/sha256.o common/sha512.o common/sha384.o common/efi_memmap.o
+obj-y += common/poly1305/poly1305.o common/poly1305/poly1305-x86.o
+obj-y += common/poly1305/x86cpuid.o
 
 OBJS := $(obj-y)
 
@@ -36,6 +38,9 @@ $(TARGET).strip : $(TARGET)
 
 $(TARGET).gz : $(TARGET).strip
 	gzip -n -f -9 < $< > $@
+
+$(TARGET).mb2 : $(TARGET).strip
+	$(OBJCOPY) -O binary $< $@
 
 $(TARGET) : $(OBJS) $(TARGET_LDS)
 	$(LD) $(LDFLAGS) -T $(TARGET_LDS) -N $(OBJS) -o $@
@@ -52,7 +57,7 @@ $(TARGET_LDS).x : FORCE
 dist : install
 
 
-build : $(TARGET).gz
+build : $(TARGET).gz $(TARGET).mb2
 
 
 install : $(DISTDIR)/boot/$(TARGET).gz
@@ -139,3 +144,6 @@ endif
 # -std=gnu{89,99} gets confused by # as an end-of-line comment marker
 %.s : %.S $(HDRS)  $(BUILD_DEPS)
 	$(CPP) $(AFLAGS) $< -o $@
+
+%.S : %.pl $(HDRS) $(BUILD_DEPS)
+	/usr/bin/perl $< "elf" $(AFLAGS) $@
