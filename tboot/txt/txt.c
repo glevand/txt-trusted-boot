@@ -535,7 +535,7 @@ static void configure_vtd(void)
     struct dmar_remapping *dmar_remap = vtd_get_dmar_remap(&remap_length);
 
     if (dmar_remap == NULL) {
-        printk("cannot get DMAR remapping strucutues, skiping configuration\n");
+        printk("cannot get DMAR remapping structures, skipping configuration\n");
         return;
     } else {
         printk("configuring DMAR remapping\n");

@@ -421,14 +421,14 @@ bool parse_input_params(int argc, char **argv, param_data_t *params)
                 break;
             case 'i':                       /* --image */
                 if ( optarg == NULL ) {
-                    error_msg("Misssing filename for --image option\n");
+                    error_msg("Missing filename for --image option\n");
                     return false;
                 }
                 strcpy_s(params->image_file, sizeof(params->image_file), optarg);
                 break;
             case 'l':                       /* --cmdline */
                 if ( optarg == NULL ) {
-                    error_msg("Misssing string for --cmdline option\n");
+                    error_msg("Missing string for --cmdline option\n");
                     return false;
                 }
                 if (strnlen_s(optarg, sizeof(params->cmdline)) > sizeof(params->cmdline) - 1) {

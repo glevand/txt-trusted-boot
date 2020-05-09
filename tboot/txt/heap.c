@@ -278,7 +278,7 @@ uint32_t print_event_2_1(void *evt)
         print_hex("\t\t\t     ", evt_data_ptr, event_size);
     }
     else { 
-        printk(TBOOT_DETA"sth wrong in TCG event log: algoritm count = %u\n", evt_ptr->digest.count);
+        printk(TBOOT_DETA"sth wrong in TCG event log: algorithm count = %u\n", evt_ptr->digest.count);
         evt_data_ptr= (uint8_t *)evt +12;
     }
     return (evt_data_ptr + event_size - (uint8_t *)evt);

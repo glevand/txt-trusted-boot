@@ -409,7 +409,7 @@ int main(int argc, char* argv[])
             break;
 
         default:
-            printf("Unknonw command line option\n");
+            printf("Unknown command line option\n");
             break;
         }
     }
@@ -430,7 +430,7 @@ int main(int argc, char* argv[])
     }
     else if ( cmd == 'C' ) {    
         if ( *mle_file == '\0' ) {
-            ERROR("Error: no ouput file specified\n");
+            ERROR("Error: no input file specified\n");
             goto out;
         }
         alg_type = str_to_hash_alg(alg_name);

@@ -61,7 +61,7 @@ o  Verified Launch.  Tboot will extend verification from the MLE to the kernel/V
 Instructions for Building:
 -------------------------
 o  The trousers sub-project has been removed (it was using an out-of-date
-   version and was often problematic to build).  Instead, the trosuers and
+   version and was often problematic to build).  Instead, the trousers and
    trousers-devel packages must already be installed in order to build the
    lcptools sub-project.  Most distrubtions either provide these packages
    by default or optionally; otherwise they can be found on various package

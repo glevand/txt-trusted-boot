@@ -154,7 +154,7 @@ bool do_create(const param_data_t *params)
     if ( !existing_policy )
         new_policy(params->policy_type, params->policy_control, params->hash_alg);
     else {
-        error_msg("warning: modifing existing policy file, hash algorithm "
+        error_msg("warning: modifying existing policy file, hash algorithm "
                   "will not be changed\n");
         modify_policy(params->policy_type, params->policy_control);
     }
@@ -220,7 +220,7 @@ bool do_add(const param_data_t *params)
 	}
 
         if ( verbose ) {
-            info_msg("cummulative hash is...");
+            info_msg("cumulative hash is...");
             print_hash(&final_hash, g_policy->hash_alg);
         }
 

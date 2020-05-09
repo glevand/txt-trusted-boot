@@ -54,7 +54,7 @@ printf("Test #%d: NULL Scan String Check\n", ++testno);
     }
 
 /*--------------------------------------------------*/
-/* 3  Test for NULL Count ouput check                       */
+/* 3  Test for NULL Count output check                       */
     printf("Test #%d: NULL Count parameter Check: \n", ++testno);
 
     rc = strcspn_s(str1, LEN, str2, LEN, NULL);

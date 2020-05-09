@@ -377,7 +377,7 @@ lcp_read_index(uint32_t index,
 
     if ( data == NULL || read_space > *data_length ) {
         log_info("Data size to read is %d.\n", read_space);
-        log_info("Not enought memory allocated for output data! "\
+        log_info("Not enough memory allocated for output data! "\
                 "Max size allocated is %d.\n",
                 *data_length);
         ret = LCP_E_INVALID_PARAMETER;
