@@ -1,0 +1,106 @@
+.\"
+.TH LCP2_CRTPOLELT 8 "2020-05-10" "tboot" "User Manuals"
+.SH NAME
+lcp2_crtpolelt \- create an Intel(R) TXT policy element of specified type.
+.SH SYNOPSIS
+.B lcp2_crtpolelt
+.I COMMAND
+.RI [ OPTION ]
+.SH DESCRIPTION
+.B lcp_crtpolelt
+is used to create an Intel(R) TXT policy element of specified type.
+.SH COMMANDS
+.TP
+\fB--create \fB--type \fItype \fB--out \fIFILE \fR[\fB--ctrl \fIpol_elt_ctr1\fR]\fP
+create a policy element
+.RS
+.TP
+\fB--type \fItype\fP
+type of element; must be first option; see below for type strings and their options
+.TP
+\fB--out \fIFILE\fP
+output file name
+.TP
+\fR[\fB--ctrl \fIpol_elt_ctr1\fR]\fP
+PolEltControl field (hex or decimal)
+.RE
+.TP
+\fB--show \fIfile\fR [\fIfile...\fP]
+show a policy element
+.TP
+\fB--verbose\fP
+enable verbose output; can be specified with any command
+.TP
+\fB--help\fP
+print out the help message
+.SH OPTIONS
+Command \fB--create\fR requires additional parameters depends on given element's type
+.TP
+\fBmle \fR[\fB--minver \fIver\fR] \fR[\fB--alg \fIalgorithm\fR] \fIfile\fR [\fIfile\fR...]\fP
+.RS
+.TP \w'\fB--alg\ \fI<sha1|sha256|sha386|sha512>\fP'u+1n
+\fB--minver \fIver\fP
+minimum version of SINIT
+.TP
+\fB--alg \fI<sha1|sha256|sha386|sha512>\fP
+hash algorithm
+.TP
+\fR\fIfile\fR [\fIfile\fR...]\fP
+one or more files containing MLE hash(es); each file can contain multiple hashes
+.RE
+.TP 
+\fBcustom \fR\fB--uuid \fIUUID \fR\fIfile\fR\fP
+.RS
+.TP \w'\fB--uuid\ \fIUUID\fP'u+1n
+\fB--uuid \fIUUID\fP
+UUID in format: {0xaabbccdd, 0xeeff, 0xgghh, 0xiijj, {0xkk 0xll, 0xmm, 0xnn, 0xoo, 0xpp}} or "--uuid tboot" to use default
+.TP
+\fIfile\fP
+file containing element data
+.RE
+.TP
+\fBsbios \fR[\fB--alg \fIalgorithm\fR] \fIfile\fR [\fIfile\fR...]\fP
+.RS
+.TP \w'\fB--alg\ \fI<sha1|sha256|sha386|sha512>\fP'u+1n
+\fB--alg \fI<sha1|sha256|sha386|sha512>\fP
+hash algorithm
+.TP
+\fR\fIfile\fR [\fIfile\fR...]\fP
+one or more files containing BIOS hash(es); each file can contain multiple hashes; the first hash in the first file will be the fallback hash
+.RE
+.TP
+\fBstm \fR[\fB--alg \fIalgorithm\fR] \fIfile\fR [\fIfile\fR...]\fP
+.RS
+.TP \w'\fB--alg\ \fI<sha1|sha256|sha386|sha512>\fP'u+1n
+\fB--alg \fI<sha1|sha256|sha386|sha512> \fP
+hash algorithm
+.TP
+\fIfile\fR [\fIfile\fR...]\fP
+one or more files containing STM hash(es); each file can contain multiple hashes
+.RE
+.TP
+\fBpconf2 \fB--alg \fIalgorithm\fR [\fB--pcrN \fIhash_value\fR]\fP
+.RS
+.TP \w'\fB--alg\ \fI<sha1|sha256|sha386|sha512>\fP'u+1n
+\fB--alg \fI<sha1|sha256|sha386|sha512>\fR \fP
+PCR hash algorithm
+.TP
+\fB--pcrN \fIhash_value\fP
+PCR value for PCR #N, where 0 <= N <= 7.
+.SH EXAMPLES
+.P
+Create MLE element:
+.EX
+lcp2_crtpolelt --create --type mle --out mle.elt --ctrl 0x00 --alg sha256 --minver 0 mle_hash
+.EE
+.P
+Create PCONF2 element:
+.EX
+lcp2_crtpolelt --create --type pconf2 --out pconf2.elt --ctrl 0x00 --alg sha256 --pcr0 <PCR[0] hash> --pcr3 <PCR[3] hash> 
+.EE
+.SH "SEE ALSO"
+.BR lcp2_crtpol (8),
+.BR lcp2_mlehash (8),
+.BR lcp2_crtpollist (8),
+.BR uuidgen (1),
+.BR tb_polgen (8).

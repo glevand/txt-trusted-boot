@@ -1,0 +1,82 @@
+.\"
+.TH LCP2_CRTPOLLIST 8 "2020-05-10" "tboot" "User Manuals"
+.SH NAME
+lcp2_crtpollist \- create an Intel(R) TXT policy list
+.SH SYNOPSIS
+.B lcp2_crtpollist
+.I COMMAND
+.RI [ OPTION ]
+.SH DESCRIPTION
+.B lcp2_crtpollist
+is used to create an Intel(R) TXT policy list.
+.SH OPTIONS
+.TP
+.B --create
+Create a TXT policy list. The following options are available:
+.RS
+.TP \w'\fB--out\ \fIfile\fP'u+1n
+\fB--out\ \fIfile\fP
+output file for policy list
+.TP
+\fR[\fIfile\fR]...\fP
+policy element files
+.RE
+.TP
+.B --sign
+Sign a TXT policy list.
+.RS
+.TP \w'\fB--sigalg\ \fI<rsa|ecdsa|sm2>\fP'u+1n
+\fB--sigalg\ \fI<rsa|ecdsa|sm2>\fP
+Signature algorithm. You can specify a symbolic name or a hexadecimal constant.
+.TP
+\fB--pub\ \fIfile\fP
+Public key to use, must be in PEM format.
+.TP
+\fB[--priv\ \fIfile\fP]
+Private key to use, must be in PEM format. This option is required unless you use the \fB--nosig\fP option
+.TP
+\fR[\fB--rev \fIcounter\fR]\fP
+revocation counter value
+.TP
+\fR[\fB--nosig\fR]\fP
+don't add a SigBlock
+.TP
+\fB--out\ \fIfile\fP
+policy list file
+.RE
+.TP
+.B --addsig
+Add a signature
+.RS
+.TP \w'\fB--sig\ \fIfile\fP'u+1n
+\fB--sig\ \fIfile\fP
+file containing signature (big-endian)
+.TP
+\fB--out\ \fIfile\fP
+policy list file
+.RE
+.TP
+\fB--show \fIfile\fP
+Show contents of a policy file
+.TP
+.B --help
+Print out the help message.
+.TP
+.B --verbose
+Enable verbose output; can be specified with any command.
+.SH EXAMPLES
+.P
+Create unsigned policy list with MLE element:
+.EX
+lcp2_crtpollist --create --out list.lst mle.elt
+.EE
+.P
+Sign policy:
+.EX
+lcp2_crtpollist --sign --sigalg rsa --pub pubkey.pem --priv privkey.pem --out list.lst
+.EE
+.SH "SEE ALSO"
+.BR lcp2_crtpol (8),
+.BR lcp2_crtpolelt (8),
+.BR lcp2_crtpollist (8),
+.BR openssl(1).

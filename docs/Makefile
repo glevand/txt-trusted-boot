@@ -26,7 +26,11 @@ dist : install
 
 install :
 	[ -d $(TBOOT_MANPATH)/man8 ] || $(INSTALL_DIR) $(TBOOT_MANPATH)/man8
-	$(INSTALL_DATA) -t $(TBOOT_MANPATH)/man8 man/acminfo.8 man/lcp_readpol.8 man/lcp_writepol.8 man/tb_polgen.8 man/txt-stat.8
+	$(INSTALL_DATA) -t $(TBOOT_MANPATH)/man8 \
+	man/acminfo.8 man/lcp_readpol.8 man/lcp_writepol.8 man/tb_polgen.8 \
+	man/txt-stat.8 man/lcp2_crtpol.8 man/lcp2_crtpolelt.8 man/lcp2_crtpollist.8 \
+	man/lcp2_mlehash.8 man/parse_err.8 man/tpmnv_defindex.8 man/tpmnv_getcap.8 \
+	man/tpmnv_lock.8 man/tpmnv_relindex.8
 
 
 clean :
