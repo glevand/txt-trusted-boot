@@ -92,6 +92,8 @@ endif
 
 CFLAGS += -I$(ROOTDIR)/safestringlib/include
 
+export CFLAGS
+
 # common dummy rule to force execution
 .PHONY: FORCE
 FORCE :

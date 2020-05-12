@@ -1,6 +1,6 @@
 IDIR = include
 CC ?= gcc
-CFLAGS += -I$(IDIR) -fstack-protector-strong -fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -DSTDC_HEADERS
+CFLAGS += -I$(IDIR) -fstack-protector-strong -fPIE -fPIC -O2 -D_FORTIFY_SOURCE=2 -Wformat -Wformat-security -DSTDC_HEADERS -Wno-implicit-fallthrough
 LDFLAGS += -z noexecstack -z relo -z now
 
 ODIR=obj
