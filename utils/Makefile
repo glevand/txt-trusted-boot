@@ -11,7 +11,7 @@ ROOTDIR ?= $(CURDIR)/..
 
 include $(ROOTDIR)/Config.mk
 
-TARGETS := txt-stat parse_err acminfo
+TARGETS := txt-stat txt-parse_err txt-acminfo
 
 CFLAGS += -D_LARGEFILE64_SOURCE
 LIBS += $(ROOTDIR)/safestringlib/libsafestring.a
@@ -55,10 +55,10 @@ BUILD_DEPS := $(ROOTDIR)/Config.mk $(CURDIR)/Makefile
 txt-stat : txt-stat.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 
-parse_err : parse_err.o
+txt-parse_err : txt-parse_err.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 
-acminfo : acminfo.o
+txt-acminfo : txt-acminfo.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LIBS) -o $@
 %.o : %.c $(BUILD_DEPS)
 	$(CC) $(CFLAGS) -DNO_TBOOT_LOGLVL -c $< -o $@
