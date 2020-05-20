@@ -63,6 +63,11 @@ void *read_elt_file(const char *elt_filename, size_t *length)
     /* find size */
     fseek(fp, 0, SEEK_END);
     long len = ftell(fp);
+    if (len <= 0) {
+        error_msg("failed to get file len\n");
+        fclose(fp);
+        return NULL;
+    }
     rewind(fp);
 
     void *data = malloc(len);

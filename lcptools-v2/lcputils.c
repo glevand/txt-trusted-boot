@@ -139,6 +139,11 @@ void *read_file(const char *file, size_t *length, bool fail_ok)
     /* find size */
     fseek(fp, 0, SEEK_END);
     long len = ftell(fp);
+    if (len <= 0) {
+        ERROR("Error: failed to get file len\n");
+        fclose(fp);
+        return NULL;
+    }
     rewind(fp);
 
     void *data = malloc(len);
@@ -570,8 +575,8 @@ bool verify_signature(const uint8_t *data, size_t data_size,
 
     default :
         LOG("unknown hash alg\n");
-        return false;
         RSA_free(rsa_pubkey);
+        return false;
     }
 
     RSA_free(rsa_pubkey);

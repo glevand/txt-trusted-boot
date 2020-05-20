@@ -192,7 +192,7 @@ bool import_hash(const char *string, tb_hash_t *hash, uint16_t alg)
          iter_a < string_len && iter_b <= hash_len;
          iter_a += 2, iter_b++) {
         memcpy_s(byte, sizeof(byte), &string[iter_a], 2);
-        hash->sha1[iter_b] = strtol(byte, NULL, 16);
+        hash->sha512[iter_b] = strtol(byte, NULL, 16);
     }
     if (iter_a != string_len || iter_b != hash_len)
         return false;

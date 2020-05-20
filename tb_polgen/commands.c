@@ -91,6 +91,12 @@ static bool hash_file(const char *filename, bool unzip, tb_hash_t *hash, uint16_
             break;
         default:
             error_msg("unsupported hash alg (%d)\n", hash_alg);
+            EVP_MD_CTX_destroy(ctx);
+            if ( unzip ) {
+                gzclose((gzFile)f);
+            } else {
+                fclose(f);
+            }
             return false;
     }
 

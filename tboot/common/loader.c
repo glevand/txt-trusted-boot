@@ -786,7 +786,7 @@ unsigned long get_mbi_mem_end_mb1(const multiboot_info_t *mbi)
 static bool move_modules_to_high_memory(loader_ctx  *lctx)
 {
     uint32_t memRequired;
-    uint64_t max_ram_base, max_ram_size, ld_ceiling;
+    uint64_t max_ram_base = 0, max_ram_size = 0, ld_ceiling;
 
     uint32_t module_count, mod_i, mods_remaining;
     module_t *m;
@@ -1290,7 +1290,7 @@ static bool convert_mb2_to_mb1(void)
             s = (uint8_t *)&apm->version;
             d = (uint8_t *) obd;  mbi->apm_table = obd;
             for (i = 0; 
-                 i < sizeof(struct mb2_tag_apm) - sizeof(uint32_t);
+                 i < sizeof(struct mb2_tag_apm) - 2*sizeof(uint32_t);
                  i++){
                 *d = *s;
                 d++; s++; obd++;

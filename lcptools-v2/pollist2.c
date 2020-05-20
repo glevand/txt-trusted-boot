@@ -141,6 +141,7 @@ lcp_list_t *read_policy_list_file(const char *file, bool fail_ok,
         return pollist;
     }
 
+    free(pollist);
     return NULL;
 }
 
@@ -496,7 +497,7 @@ lcp_policy_list_t2 *add_tpm20_signature(lcp_policy_list_t2 *pollist,
         size_t old_size = get_tpm20_policy_list_size(pollist);
         size_t sig_size = sizeof(lcp_rsa_signature_t) +
                                  2*sig->rsa_signature.pubkey_size;
-        LOG("add_tpm20_signature: sizeof(lcp_rsa_signature_t)=%d\n",
+        LOG("add_tpm20_signature: sizeof(lcp_rsa_signature_t)=%zu\n",
                 sizeof(lcp_rsa_signature_t));
         lcp_policy_list_t2 *new_pollist = realloc(pollist, old_size + sig_size);
         if ( new_pollist == NULL ) {

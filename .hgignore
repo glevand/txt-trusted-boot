@@ -54,3 +54,4 @@
 ^utils/txt-acminfo$
 ^utils/txt-stat$
 ^utils/txt-parse_err$
+^cov-int/.*$

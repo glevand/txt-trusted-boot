@@ -174,7 +174,7 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
         if ( mem_limit > 0x100000000ULL || mem_limit == 0 )
             mem_limit = 0x100000000ULL;
 
-        uint64_t max_ram_base, max_ram_size;
+        uint64_t max_ram_base = 0, max_ram_size = 0;
         if (!efi_memmap_get_highest_sized_ram(initrd_size, mem_limit,
                                               &max_ram_base, &max_ram_size)) {
             if (!e820_get_highest_sized_ram(initrd_size, mem_limit,

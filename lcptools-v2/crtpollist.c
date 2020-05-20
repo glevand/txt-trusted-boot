@@ -457,12 +457,16 @@ static int create(void)
             return 1;
         }
         if ( !verify_policy_element(elt, len) ) {
+            free(elt);
             free(pollist);
             return 1;
         }
         pollist = add_tpm20_policy_element(pollist, elt);
-        if ( pollist == NULL )
+        if ( pollist == NULL ) {
+            free(elt);
             return 1;
+        }
+        free(elt);
     }
     bool write_ok = write_tpm20_policy_list_file(pollist_file, pollist);
 

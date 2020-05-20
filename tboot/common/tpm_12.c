@@ -259,8 +259,7 @@ static bool tpm12_pcr_read(struct tpm_if *ti, uint32_t locality,
 static bool _tpm12_pcr_extend(struct tpm_if *ti, uint32_t locality,
                              uint32_t pcr, const tpm_digest_t* in)
 {
-    uint32_t ret, in_size = 0, out_size;
-    tpm12_digest_t * out = NULL;
+    uint32_t ret, in_size = 0, out_size = 0;
 
     if ( ti == NULL )
         return false;
@@ -269,10 +268,6 @@ static bool _tpm12_pcr_extend(struct tpm_if *ti, uint32_t locality,
         ti->error = TPM_BAD_PARAMETER;
         return false;
     }
-    if ( out == NULL )
-        out_size = 0;
-    else
-        out_size = sizeof(*out);
 
     /* copy pcr into buf in reversed byte order, then copy in data */
     reverse_copy(WRAPPER_IN_BUF, &pcr, sizeof(pcr));
@@ -290,18 +285,6 @@ static bool _tpm12_pcr_extend(struct tpm_if *ti, uint32_t locality,
         ti->error = ret;
         return false;
     }
-
-    if ( out != NULL && out_size > 0 ) {
-       out_size = (out_size > sizeof(*out)) ? sizeof(*out) : out_size;
-       tb_memcpy((void *)out, WRAPPER_OUT_BUF, out_size);
-    }
-
-#ifdef TPM_TRACE
-    {
-        printk(TBOOT_INFO"TPM: ");
-        print_hex(NULL, out->digest, out_size);
-    }
-#endif
 
     return true;
 }

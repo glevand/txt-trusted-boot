@@ -224,8 +224,6 @@ err:
         free(pcr_comp);
     if (pcr_digest)
         free(pcr_digest);
-    if (elt)
-        free(elt);
     return NULL;
 }
 
