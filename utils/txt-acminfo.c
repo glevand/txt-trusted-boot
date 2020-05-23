@@ -39,6 +39,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -75,15 +76,19 @@ static unsigned long long rdmsr(unsigned int msr)
     int fd = open("/dev/cpu/0/msr", O_RDONLY);
     if ( fd == -1 ) {
         printf("Error:  failed to open /dev/cpu/0/msr\n");
-        return 0;
+        printf("Perhaps you should modprobe msr?\n");
+        exit(1);
     }
 
     /* lseek() to MSR # */
-    if ( lseek(fd, msr, SEEK_SET) == (off_t)-1 )
+    if ( lseek(fd, msr, SEEK_SET) == (off_t)-1 ) {
         printf("Error:  failed to find MSR 0x%x\n", msr);
-    else {
-        if ( read(fd, &val, sizeof(val)) != sizeof(val) )
+        exit(1);
+    } else {
+        if ( read(fd, &val, sizeof(val)) != sizeof(val) ) {
             printf("Error:  failed to read MSR 0x%x value\n", msr);
+            exit(1);
+        }
     }
 
     close(fd);
