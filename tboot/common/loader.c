@@ -1999,6 +1999,13 @@ find_efi_memmap(loader_ctx *lctx, uint32_t *descr_size,
     struct mb2_tag *start = NULL, *hit = NULL;
     struct mb2_tag_efi_mmap *efi_mmap = NULL;
 
+    if (LOADER_CTX_BAD(lctx) || lctx->type != MB2_ONLY) {
+        return 0;
+    }
+    if (descr_size == NULL || descr_vers == NULL || mmap_size == NULL) {
+        return 0;
+    }
+
     start = (struct mb2_tag *)(lctx->addr + 8);
     hit = find_mb2_tag_type(start, MB2_TAG_TYPE_EFI_MMAP);
     if (hit == NULL) {
