@@ -163,6 +163,36 @@ static const tb_policy_t _def_policy = {
     }
 };
 
+/* default policy for TPM 1.2 */
+static const tb_policy_t _def_policy_12 = {
+    version        : 2,
+    policy_type    : TB_POLTYPE_CONT_NON_FATAL,
+    hash_alg       : TB_HALG_SHA1,
+    policy_control : TB_POLCTL_EXTEND_PCR17,
+    num_entries    : 3,
+    entries        : {
+        {   /* mod 0 is extended to PCR 18 by default, so don't re-extend it */
+            mod_num    : 0,
+            pcr        : TB_POL_PCR_NONE,
+            hash_type  : TB_HTYPE_ANY,
+            num_hashes : 0
+        },
+        {   /* all other modules are extended to PCR 19 */
+            mod_num    : TB_POL_MOD_NUM_ANY,
+            pcr        : 19,
+            hash_type  : TB_HTYPE_ANY,
+            num_hashes : 0
+        },
+        {   /* NV index for geo-tagging will be extended to PCR 22 */
+            mod_num    : TB_POL_MOD_NUM_NV_RAW,
+            pcr        : 22,
+            hash_type  : TB_HTYPE_ANY,
+            nv_index   : 0x40000010,
+            num_hashes : 0
+        }
+    }
+};
+
 /* default policy for Details/Authorities pcr mapping */
 static const tb_policy_t _def_policy_da = {
     version        : 2,
@@ -378,7 +408,11 @@ tb_error_t set_policy(void)
 
     /* either no policy in TPM NV or policy is invalid, so use default */
     printk(TBOOT_WARN"failed to read policy from TPM NV, using default\n");
-    g_policy = g_using_da ? &_def_policy_da : &_def_policy;
+    if (g_tpm_ver == TPM_VER_12) {
+        g_policy = &_def_policy_12;
+    } else {
+        g_policy = g_using_da ? &_def_policy_da : &_def_policy;
+    }
     policy_index_size = calc_policy_size(g_policy);
 
     /* sanity check; but if it fails something is really wrong */
