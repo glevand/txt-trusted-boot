@@ -200,6 +200,13 @@ ENTRY(__start)
         call    begin_launch
         ud2
 
+ENTRY(__enable_nmi)
+	pushf
+	push %cs
+	push $(1f)
+	iret
+1:	ret
+
 /*
  * vmexit handler
  */

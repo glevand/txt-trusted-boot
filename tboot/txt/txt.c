@@ -91,6 +91,8 @@ extern void print_event(const tpm12_pcr_event_t *evt);
 extern void print_event_2(void *evt, uint16_t alg);
 extern uint32_t print_event_2_1(void *evt);
 
+extern void __enable_nmi(void);
+
 /*
  * this is the structure whose addr we'll put in TXT heap
  * it needs to be within the MLE pages, so force it to the .text section
@@ -739,8 +741,9 @@ static void txt_wakeup_cpus(void)
 
     /* enable SMIs on BSP before waking APs (which will enable them on APs)
        because some SMM may take immediate SMI and hang if AP gets in first */
-    printk(TBOOT_DETA"enabling SMIs on BSP\n");
+    printk(TBOOT_DETA"enabling SMIs and NMI on BSP\n");
     __getsec_smctrl();
+    __enable_nmi();
 
     atomic_set(&ap_wfs_count, 0);
 
@@ -1189,9 +1192,10 @@ void txt_cpu_wakeup(void)
     if ( !verify_stm(cpuid) )
         apply_policy(TB_ERR_POST_LAUNCH_VERIFICATION);
 
-    /* enable SMIs */
-    printk(TBOOT_DETA"enabling SMIs on cpu %u\n", cpuid);
+    /* enable SMIs and NMI */
+    printk(TBOOT_DETA"enabling SMIs and NMI on cpu %u\n", cpuid);
     __getsec_smctrl();
+    __enable_nmi();
 
     atomic_inc(&ap_wfs_count);
     if ( use_mwait() )
