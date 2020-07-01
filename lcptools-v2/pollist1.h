@@ -57,6 +57,10 @@ extern unsigned char *get_tpm12_sig_block(const lcp_policy_list_t *pollist);
 extern void calc_tpm12_policy_list_hash(const lcp_policy_list_t *pollist,
                                   lcp_hash_t2 *hash, uint16_t hash_alg);
 
+extern bool write_tpm12_policy_list_file(const char *file,
+                            const lcp_policy_list_t *pollist);
+
+extern bool sign_lcp_policy_list_t(sign_user_input user_input);
 
 
 #endif    /* __POLLIST1_H__ */

@@ -43,6 +43,26 @@
 
 #define MAX_PATH           256
 
+#include <openssl/evp.h>
+
+//Helper struct to pass user input data to functions in pollist2 and pollist2_1
+typedef struct sign_user_input {
+    uint16_t sig_alg;
+    uint16_t hash_alg;
+    uint16_t rev_ctr;
+    char list_file[MAX_PATH];
+    char pubkey_file[MAX_PATH];
+    char privkey_file[MAX_PATH];
+} sign_user_input;
+
+/*
+This will hold various dynamic buffers like keys, sigs, digests and such.
+*/
+typedef struct sized_buffer {
+    size_t size;
+    unsigned char data[];
+} sized_buffer;
+
 extern bool verbose;
 
 extern void ERROR(const char *fmt, ...);
@@ -62,24 +82,33 @@ extern bool parse_line_hashes(const char *line, tb_hash_t *hash, uint16_t alg);
 extern bool parse_file(const char *filename,
 		       bool (*parse_line)(const char *line));
 
-const char *hash_alg_to_str(uint16_t alg);
+extern const char *hash_alg_to_str(uint16_t alg);
+extern const char *key_alg_to_str(uint16_t alg);
+extern const char *sig_alg_to_str(uint16_t alg);
 
-const char *sig_alg_to_str(uint16_t alg);
+extern sized_buffer *allocate_sized_buffer(size_t size);
 
 uint16_t str_to_hash_alg(const char *str);
 uint16_t str_to_lcp_hash_mask(const char *str);
 uint16_t convert_hash_alg_to_mask(uint16_t hash_alg);
 
-uint16_t str_to_sig_alg(const char *str, const uint16_t version);
-uint32_t str_to_sig_alg_mask(const char *str, const uint16_t version);
+uint16_t str_to_sig_alg(const char *str);
+uint32_t str_to_sig_alg_mask(const char *str, const uint16_t version, size_t size);
 
 uint16_t str_to_pol_ver(const char *str);
 
 size_t get_lcp_hash_size(uint16_t hash_alg);
+extern void buffer_reverse_byte_order(uint8_t *buffer, size_t length);
 
-bool verify_signature(const uint8_t *data, size_t data_size,
-                      const uint8_t *pubkey, size_t pubkey_size,
-                      const uint8_t *sig, bool is_sig_little_endian);
+extern bool rsa_ssa_pss_sign(sized_buffer *sig_block, sized_buffer *data,
+        uint16_t sig_alg, uint16_t hash_alg, EVP_PKEY_CTX *private_key_context);
+
+bool verify_ecdsa_signature(const unsigned char *data, size_t data_size,
+    const unsigned char *pubkey_x, const unsigned char *pubkey_y, size_t pubkey_size, 
+    const uint16_t hashalg, const unsigned char *sig_r, const unsigned char *sig_s);
+bool verify_rsa_signature(sized_buffer *data, sized_buffer *pubkey, sized_buffer *signature,
+                          uint16_t hashAlg, uint16_t sig_alg, uint16_t list_ver);
+EVP_PKEY_CTX *rsa_get_sig_ctx(const char *key_path, uint16_t key_size_bytes);
 #endif    /* __LCPUTILS_H__ */
 
 

@@ -62,6 +62,8 @@
 #include <txt/txt.h>
 #include <txt/heap.h>
 
+#define MAJOR_VER(v)      ((v) >> 8)
+
 extern void shutdown(void);
 extern void s3_launch(void);
 
@@ -293,7 +295,9 @@ static bool read_policy_from_tpm(uint32_t index, void* policy_index, size_t *pol
 static bool unwrap_lcp_policy(void)
 {
     void* lcp_base;
+    lcp_policy_element_t *elt;
     uint32_t lcp_size;
+    uint16_t list_ver;
 
     // scaffolding
     printk(TBOOT_INFO"in unwrap_lcp_policy\n");
@@ -314,12 +318,36 @@ static bool unwrap_lcp_policy(void)
     /* if lcp policy data version is 2+ */
     if ( tb_memcmp((void *)lcp_base, LCP_POLICY_DATA_FILE_SIGNATURE,
              LCP_FILE_SIG_LENGTH) == 0 ) {
-        lcp_policy_data_t *poldata = (lcp_policy_data_t *)lcp_base;
-        lcp_policy_list_t *pollist = &poldata->policy_lists[0];
+        uint32_t elts_size;
+        uint32_t all_elt_size; //Value from lcp list PolicyElementsSize field
+        lcp_policy_data_t2 *poldata = (lcp_policy_data_t2 *)lcp_base;
+        lcp_list_t *pollist = &poldata->policy_lists[0];
 
+        //Read list version
+        tb_memcpy((void*)&list_ver, (const void *)pollist, sizeof(uint16_t));
         for ( int i = 0; i < poldata->num_lists; i++ ) {
-            lcp_policy_element_t *elt = pollist->policy_elements;
-            uint32_t elts_size = 0;
+            if (MAJOR_VER(list_ver) == MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION)) {
+                elt = pollist->tpm12_policy_list.policy_elements;
+                elts_size = 0;
+                all_elt_size = pollist->tpm12_policy_list.policy_elements_size;
+            }
+            else if (MAJOR_VER(list_ver) ==
+                        MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION)) {
+                elt = pollist->tpm20_policy_list.policy_elements;
+                elts_size = 0;
+                all_elt_size = pollist->tpm20_policy_list.policy_elements_size;
+            }
+            else if (MAJOR_VER(list_ver) ==
+                        MAJOR_VER(LCP_TPM20_POLICY_LIST2_1_VERSION_300)) {
+                elt = pollist->tpm20_policy_list_2_1.PolicyElements;
+                elts_size = 0;
+                all_elt_size = pollist->tpm20_policy_list_2_1.PolicyElementsSize;
+            }
+            else {
+                printk(TBOOT_ERR"Error: Policy list version not recognized: 0x%x.\n",
+                        list_ver);
+                return false;
+            }
 
             while ( elt ) {
                 /* check element type */
@@ -338,16 +366,24 @@ static bool unwrap_lcp_policy(void)
                 }
 
                 elts_size += elt->size;
-                if ( elts_size >= pollist->policy_elements_size )
+                if ( elts_size >= all_elt_size )
                     break;
 
                 elt = (void *)elt + elt->size;
             }
-            if ( pollist->version == LCP_TPM12_POLICY_LIST_VERSION )
-                pollist = (void *)pollist + get_tpm12_policy_list_size(pollist);
-            else if ( pollist->version == LCP_TPM20_POLICY_LIST_VERSION )
-                pollist = (void *)pollist + get_tpm20_policy_list_size(
-                        (lcp_policy_list_t2 *)pollist);
+            //If necessary go to next list.
+            if ( MAJOR_VER(list_ver) == MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION)) {
+                pollist = (void *)pollist +
+                       get_tpm12_policy_list_size((lcp_policy_list_t *)pollist);
+            }
+            else if ( MAJOR_VER(list_ver) == MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION)) {
+                pollist = (void *)pollist + 
+                      get_tpm20_policy_list_size((lcp_policy_list_t2 *)pollist);
+            }
+            else if ( MAJOR_VER(list_ver) == MAJOR_VER(LCP_TPM20_POLICY_LIST2_1_VERSION_300) ){
+                pollist = (void *)pollist +
+                   get_raw_tpm20_list_2_1_size(&pollist->tpm20_policy_list_2_1);
+            }
         }
     }
 
@@ -388,7 +424,7 @@ tb_error_t set_policy(void)
         printk(TBOOT_DETA"\t:%lu bytes read\n", policy_index_size);
         /* assume lcp policy has been verified by sinit already */
         lcp_policy_t *pol = (lcp_policy_t *)_policy_index_buf;
-        if ( pol->version == LCP_DEFAULT_POLICY_VERSION_2 &&
+        if ( MAJOR_VER(pol->version) == MAJOR_VER(LCP_DEFAULT_POLICY_VERSION_2) &&
              pol->policy_type == LCP_POLTYPE_LIST && unwrap_lcp_policy() ) {
             if ( verify_policy((tb_policy_t *)_policy_index_buf,
                      calc_policy_size((tb_policy_t *)_policy_index_buf),
@@ -396,7 +432,8 @@ tb_error_t set_policy(void)
                 goto policy_found;
         }
         lcp_policy_t2 *pol2 = (lcp_policy_t2 *)_policy_index_buf;
-        if ( pol2->version == LCP_DEFAULT_POLICY_VERSION &&
+        /*Only check if major version is 3, minor is checked by sinit*/
+        if ( MAJOR_VER(pol2->version) == MAJOR_VER(LCP_DEFAULT_POLICY_VERSION) &&
              pol2->policy_type == LCP_POLTYPE_LIST && unwrap_lcp_policy() ) {
             if ( verify_policy((tb_policy_t *)_policy_index_buf,
                      calc_policy_size((tb_policy_t *)_policy_index_buf),

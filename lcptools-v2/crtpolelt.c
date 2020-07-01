@@ -52,7 +52,10 @@
 #include "polelt.h"
 #include "lcputils.h"
 
+#define TOOL_VER_MAJOR 0x1
+#define TOOL_VER_MINOR 0x1
 #define MAX_HELP_TEXT       4096
+
 static char help[MAX_HELP_TEXT] =
     "Usage: lcp2_crtpolelt <COMMAND> [OPTION]\n"
     "Create an Intel(R) TXT policy element of specified type.\n\n"
@@ -67,6 +70,7 @@ static char help[MAX_HELP_TEXT] =
     "--help                            help\n"
     "--verbose                         enable verbose output; can be\n"
     "                                  specified with any command\n"
+    "--version                         show tool version.\n"
     "types :\n";
 
 bool verbose = false;
@@ -76,7 +80,7 @@ static struct option long_opts[MAX_CMDLINE_OPTS] =
 {
     /* commands */
     {"help",           no_argument,          NULL,     'H'},
-
+    {"version",        no_argument,          NULL,     'V'},
     {"create",         no_argument,          NULL,     'C'},
     {"show",           no_argument,          NULL,     'S'},
 
@@ -116,7 +120,7 @@ static void add_plugins(void)
             ERROR("Error: too many plugin options\n");
 
         /* copy help text */
-        strcat_s(help, sizeof(help), plugin->help_txt);
+        strcat_s(help, MAX_HELP_TEXT, plugin->help_txt);
     }
 }
 
@@ -139,6 +143,7 @@ int main (int argc, char *argv[])
         case 'H':            /* help */
         case 'C':            /* create */
         case 'S':            /* show */
+        case 'V':            /* version  */
             if ( prev_cmd ) {
                 ERROR("Error: only one command can be specified\n");
                 return 1;
@@ -222,7 +227,7 @@ int main (int argc, char *argv[])
             return 1;
         }
         if ( *out_file == '\0' ) {
-            ERROR("Error: no output file specified\n");
+            ERROR("Error: no ouput file specified\n");
             return 1;
         }
 
@@ -252,6 +257,12 @@ int main (int argc, char *argv[])
             return 1;
         }
         free(elt);
+        return 0;
+    }
+
+    else if ( cmd == 'V' ) /* --version */ {
+        DISPLAY("lcp2_crtpolelt version: %i.%i\nBuild date: %s", TOOL_VER_MAJOR,
+                                                    TOOL_VER_MINOR, __DATE__);
         return 0;
     }
 

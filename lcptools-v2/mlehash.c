@@ -49,10 +49,13 @@
 #include "../include/hash.h"
 #include "../include/uuid.h"
 #include "../include/lcp3.h"
-#include "lcputils.h"
 #include "../include/elf_defns.h"
 #include "../include/mle.h"
+#include "lcputils.h"
 
+
+#define TOOL_VER_MAJOR 0x1
+#define TOOL_VER_MINOR 0x1
 
 #define MAX_HELP_TEXT       4096
 static char help[MAX_HELP_TEXT] =
@@ -62,7 +65,8 @@ static char help[MAX_HELP_TEXT] =
     "       --cmdline <cmdline> cmdline\n"
     "       --alg <sha1|sha256|sha384|sha512> hashalg   "
     "--help                 print out help message\n"
-    "       --verbose       display progress indications.\n";
+    "--verbose              display progress indications.\n"
+    "--version              show tool version.\n";
 
 
 bool        verbose = false;
@@ -73,7 +77,7 @@ static struct option long_opts[] =
 {
     /* commands */
     {"help",           no_argument,          NULL,     'H'},
-
+    {"version",        no_argument,          NULL,     'V'},
     {"create",         no_argument,          NULL,     'C'},
 
     /* options */
@@ -381,6 +385,7 @@ int main(int argc, char* argv[])
         switch (c) {
         case 'H':
         case 'C':
+        case 'V':
             if ( prev_cmd ) {
                 ERROR("Error: only one command can be specified\n");
                 return 1;
@@ -409,7 +414,7 @@ int main(int argc, char* argv[])
             break;
 
         default:
-            printf("Unknown command line option\n");
+            printf("Unknonw command line option\n");
             break;
         }
     }
@@ -430,7 +435,7 @@ int main(int argc, char* argv[])
     }
     else if ( cmd == 'C' ) {    
         if ( *mle_file == '\0' ) {
-            ERROR("Error: no input file specified\n");
+            ERROR("Error: no ouput file specified\n");
             goto out;
         }
         alg_type = str_to_hash_alg(alg_name);
@@ -483,6 +488,13 @@ int main(int argc, char* argv[])
         lcp_hash_t2 *hash = malloc(sizeof(lcp_hash_t2));
         hash_buffer(hash_buf, hash_size, (tb_hash_t *)hash, alg_type);
         print_hash((tb_hash_t *)hash, alg_type);
+    }
+
+    else if ( cmd == 'V' ) /* --version */ {
+        DISPLAY("lcp2_mlehash version: %i.%i\nBuild date: %s", TOOL_VER_MAJOR,
+                                                    TOOL_VER_MINOR, __DATE__);
+        ret = 0;
+        goto out;
     }
 
     ret = 0;

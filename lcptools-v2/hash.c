@@ -43,8 +43,8 @@
 #include <openssl/evp.h>
 #include <safe_lib.h>
 #define PRINT   printf
-#include "../include/config.h"
-#include "../include/hash.h"
+#include "../../include/config.h"
+#include "../../include/hash.h"
 
 /*
  * are_hashes_equal
@@ -85,7 +85,7 @@ bool hash_buffer(const unsigned char* buf, size_t size, tb_hash_t *hash,
     if ( hash == NULL )
         return false;
 
-    if ( hash_alg == TB_HALG_SHA1 ) {
+    if ( hash_alg == TB_HALG_SHA1 || hash_alg == TB_HALG_SHA1_LG ) {
         EVP_MD_CTX *ctx = EVP_MD_CTX_create();
         const EVP_MD *md;
 

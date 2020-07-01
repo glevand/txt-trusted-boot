@@ -38,9 +38,10 @@
 
 extern size_t get_policy_size(const lcp_policy_t2 *pol);
 extern bool verify_policy(const lcp_policy_t2 *pol, size_t size, bool silent);
+extern bool verify_legacy_policy(const lcp_policy_t *pol, size_t size);
 extern void display_policy(const char *prefix, const lcp_policy_t2 *pol,
                            bool brief);
-
+extern void display_legacy_policy(const char *prefix, const lcp_policy_t *pol);
 extern const char *policy_type_to_str(uint8_t type);
 
 #endif    /* __POL_H__ */

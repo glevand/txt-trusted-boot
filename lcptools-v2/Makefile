@@ -62,13 +62,13 @@ LDFLAGS += -L.
 
 # LCP v2
 
-POLELT_PLUGINS := mle_elt.o custom_elt.o sbios_elt.o stm_elt.o pconf2_elt.o
+POLELT_PLUGINS := custom_elt.o mle_elt_legacy.o pconf_legacy.o sbios_elt.o stm_elt.o pconf2_elt.o mle_elt.o
 
 LCP2_LIB := liblcp.a
 
 LIBS += -lcrypto -llcp -lz $(ROOTDIR)/safestringlib/libsafestring.a
 
-$(LCP2_LIB) : pol.o poldata.o pollist2.o polelt.o lcputils.o hash.o pollist1.o
+$(LCP2_LIB) : pol.o poldata.o pollist2.o pollist2_1.o polelt.o lcputils.o hash.o pollist1.o
 	$(AR) rc $@ $^
 
 lcp2_crtpolelt : crtpolelt.o $(POLELT_PLUGINS) $(LCP2_LIB)

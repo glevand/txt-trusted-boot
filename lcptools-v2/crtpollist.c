@@ -38,6 +38,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <time.h>
 #define _GNU_SOURCE
 #include <getopt.h>
 #include <errno.h>
@@ -49,40 +50,72 @@
 #include <openssl/bn.h>
 #include <openssl/ecdsa.h>
 #include <openssl/ec.h>
+#include <openssl/evp.h>
 #include <safe_lib.h>
 #define PRINT   printf
-#include "../include/config.h"
-#include "../include/hash.h"
-#include "../include/uuid.h"
-#include "../include/lcp3.h"
-#include "../include/lcp3_hlp.h"
+#include "../../include/config.h"
+#include "../../include/hash.h"
+#include "../../include/uuid.h"
+#include "../../include/lcp3.h"
+#include "../../include/lcp3_hlp.h"
 #include "polelt_plugin.h"
-#include "pollist2.h"
-#include "polelt.h"
 #include "lcputils.h"
+#include "pollist2.h"
+#include "pollist2_1.h"
+#include "polelt.h"
 #include "pollist1.h"
 
+#define TOOL_VER_MAJOR 0x1
+#define TOOL_VER_MINOR 0x1
+
 static const char help[] =
-    "Usage: lcp_crtpollist <COMMAND> [OPTION]\n"
+    "Usage: lcp2_crtpollist <COMMAND> [OPTIONS]\n"
     "Create an Intel(R) TXT policy list.\n\n"
-    "--create\n"
+    "Supports:\n"
+    "    LCP_POLICY_LIST - legacy list format - major version 0x1.\n"
+    "    LCP_POLICY_LIST_2 - current list format for RSA-SSA - major version 0x2\n"
+    "    LCP_POLICY_LIST_2_1 - current list format for RSA-PSS and ECDSA - major version 0x1\n"
+    "\n--create\n"
+    "Creates LCP list version <version> containing elements from [ELT FILES]\n"
+    "and writes it to <FILE>.\n\n"
+    "To generate LCP_POLICY_LIST_2_1:\n"
     "        --out <FILE>             policy list file\n"
-    "        [FILE]...                policy element files\n"
-    "--sign\n"
-    "        --sigalg <rsa|ecdsa|sm2> signature algorithm\n"
+    "        --listver <version>      policy list version must be 0x300\n"
+    "        [ELT FILES]...           policy element file(s)\n"
+    "To generate LCP_POLICY_LIST_2:\n"
+    "        --out <FILE>             policy list file\n"
+    "        [--sigalg]               <rsa|ecdsa|sm2> signature algorithm\n"
+    "        --listver <version>      policy list version must be 0x200||0x201\n"
+    "        [ELT FILES]...           policy element file(s)\n"
+    "To generate LCP_POLICY_LIST:\n"
+    "        --out <FILE>             policy list file\n"
+    "        --listver <version>      policy list version must be 0x100\n\n"
+    "        [ELT FILES]...           policy element file(s)\n"
+    "\n--sign\n"
+    "Signs policy list file\n"
+    "        --sigalg                 <rsa|rsapss|ecdsa|sm2> signature algorithm\n"
+    "        [--hashalg]              LCP_POLICY_LIST2_1 option:\n"
+    "                                 <sha1|sha256|sha384|sha512|sm2> hash algorithm\n"
     "        --pub <key file>         PEM file of public key\n"
     "        [--priv <key file>]      PEM file of private key\n"
     "        [--rev <rev ctr>]        revocation counter value\n"
     "        [--nosig]                don't add SigBlock\n"
-    "        --out <FILE>             policy list file\n"
-    "--addsig\n"
+    "        --out <FILE>             policy list file to sign\n"
+    "\n--addsig\n"
+    "Adds signature file to LCP_POLICY_LIST_2 - this option cannot be used\n"
+    "with LCP_POLICY_LIST_2_1.\n"
     "        --sig <FILE>             file containing signature (big-endian)\n"
     "        --out <FILE>             policy list file\n"
-    "--show\n"
+    "\n--show\n"
+    "Displays policy list contents.\n"
     "        <FILE>                   policy list file\n"
-    "--help\n"
-    "--verbose                        enable verbose output; can be\n"
+    "\n--verify\n"
+    "Verifies signed LCP_POLICY_LIST_2_1 signature.\n"
+    "        <FILE>                   policy list file with signature\n"
+    "\n--help\n"
+    "\n--verbose                      enable verbose output; can be\n"
     "                                 specified with any command\n\n"
+    "\n--version                      show tool version.\n"
     "The public and private keys can be created as follows:\n"
     "  openssl genrsa -out privkey.pem 2048\n"
     "  openssl rsa -pubout -in privkey.pem -out pubkey.pem\n";
@@ -98,26 +131,29 @@ static struct option long_opts[] =
     {"sign",           no_argument,          NULL,     'S'},
     {"addsig",         no_argument,          NULL,     'A'},
     {"show",           no_argument,          NULL,     'W'},
-
+    {"verify",         no_argument,          NULL,     'V'},
+    {"version",        no_argument,          NULL,     'v'},
     /* options */
     {"out",            required_argument,    NULL,     'o'},
     {"sigalg",         required_argument,    NULL,     'a'},
+    {"hashalg",        required_argument,    NULL,     'h'},
     {"pub",            required_argument,    NULL,     'u'},
     {"priv",           required_argument,    NULL,     'i'},
     {"rev",            required_argument,    NULL,     'r'},
     {"nosig",          no_argument,          NULL,     'n'},
     {"sig",            required_argument,    NULL,     's'},
+    {"listver",        required_argument,    NULL,     'l'},
+    {"verbose",        no_argument,          NULL,     't'},
 
-    {"verbose",        no_argument,          (int *)&verbose, true},
     {0, 0, 0, 0}
 };
 
 #define MAX_FILES   32
 
-static uint16_t       version = LCP_DEFAULT_POLICY_LIST_VERSION;
+static uint16_t       version = 0x0;
 static char           pollist_file[MAX_PATH] = "";
 static char           sigalg_name[32] = "";
-static uint16_t       sigalg_type = TPM_ALG_RSASSA;  
+static uint16_t       sigalg_type = TPM_ALG_NULL; // Default
 static char           pubkey_file[MAX_PATH] = "";
 static char           privkey_file[MAX_PATH] = "";
 static char           sig_file[MAX_PATH] = "";
@@ -125,329 +161,97 @@ static uint16_t       rev_ctr = 0;
 static bool           no_sigblock = false;
 static unsigned int   nr_files = 0;
 static char           files[MAX_FILES][MAX_PATH];
+static char           hash_alg_name[32] = "";
+static uint16_t       hash_alg_cli = TPM_ALG_SHA256; //Default
 
-static lcp_signature_t2 *read_rsa_pubkey_file(const char *file)
+static int create_list_2_1(void)
 {
-    LOG("read_rsa_pubkey_file\n");
-    FILE *fp = fopen(file, "r");
-    if ( fp == NULL ) {
-        ERROR("Error: failed to open .pem file %s: %s\n", file,
-                strerror(errno));
-        return NULL;
+    LOG("create:version=0x0300\n");
+    lcp_policy_list_t2_1 *pollist = NULL;
+    size_t len;
+    lcp_policy_element_t *elt = NULL;
+    bool write_ok = false;
+
+    pollist = create_empty_tpm20_policy_list_2_1();
+    if ( pollist == NULL )
+        return 1;
+    if (version && MAJOR_VER(version) == 3)
+        pollist->Version = version;
+    if (nr_files > MAX_FILES) {
+        ERROR("Too many element files specified.\n");
+        return 1;
     }
-
-    RSA *pubkey = PEM_read_RSA_PUBKEY(fp, NULL, NULL, NULL);
-    if ( pubkey == NULL ) {
-        ERR_load_crypto_strings();
-        ERROR("Error: failed to read .pem file %s: %s\n", file,
-                ERR_error_string(ERR_get_error(), NULL));
-        ERR_free_strings();
-        fclose(fp);
-        return NULL;
+    for ( unsigned int i = 0; i < nr_files; i++ ) {
+        elt = read_file(files[i], &len, false);
+        if ( elt == NULL ) {
+            free(pollist);
+            return 1;
+        }
+        if ( !verify_policy_element(elt, len) ) {
+            free(pollist);
+            free(elt);
+            return 1;
+        }
+        pollist = add_tpm20_policy_element_2_1(pollist, elt);
+        if ( pollist == NULL )
+            return 1;
+        free(elt);
+        elt = NULL;
     }
+    write_ok = write_tpm20_policy_list_2_1_file(pollist_file, pollist);
 
-    unsigned int keysize = RSA_size(pubkey);
-    if ( keysize == 0 ) {
-        ERROR("Error: public key size is 0\n");
-        RSA_free(pubkey);
-        fclose(fp);
-        return NULL;
-    }
-
-    lcp_signature_t2 *sig = malloc(sizeof(lcp_rsa_signature_t) + 2*keysize);
-    if ( sig == NULL ) {
-        ERROR("Error: failed to allocate sig\n");
-        RSA_free(pubkey);
-        fclose(fp);
-        return NULL;
-    }
-    const BIGNUM *modulus = NULL;
-    memset_s(sig, sizeof(lcp_rsa_signature_t) + 2*keysize, 0);
-    sig->rsa_signature.pubkey_size = keysize;
-
-    /* OpenSSL Version 1.1.0 and later don't allow direct access to RSA 
-       stuct */    
-    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-        RSA_get0_key(pubkey, &modulus, NULL, NULL);
-    #else
-        modulus = pubkey->n;
-    #endif
-
-    unsigned char key[keysize];
-    BN_bn2bin(modulus, key);
-    /* openssl key is big-endian and policy requires little-endian, so reverse
-       bytes */
-    for ( unsigned int i = 0; i < keysize; i++ )
-        sig->rsa_signature.pubkey_value[i] = *(key + (keysize - i - 1));
-
-    if ( verbose ) {
-        LOG("read_rsa_pubkey_file: signature:\n");
-        display_tpm20_signature("    ", sig, TPM_ALG_RSASSA, false);
-    }
-
-    LOG("read rsa pubkey succeed!\n");
-    RSA_free(pubkey);
-    fclose(fp);
-    return sig;
-}
-
-static lcp_signature_t2 *read_ecdsa_pubkey(const EC_POINT *pubkey, const EC_GROUP *ecgroup)
-{
-    LOG("[read_ecdsa_pubkey]\n");
-
-    BIGNUM *x = BN_new();
-    BIGNUM *y = BN_new();
-    BN_CTX *ctx = BN_CTX_new();
-    EC_POINT_get_affine_coordinates_GFp((const EC_GROUP*)ecgroup, 
-            (const EC_POINT *)pubkey, x, y, ctx);
-    unsigned int keysize = BN_num_bytes(x) + BN_num_bytes(y);
-    lcp_signature_t2 *sig = malloc(sizeof(lcp_ecc_signature_t) + 2*keysize);
-    if ( sig == NULL) {
-        ERROR("Error: failed to allocate sig\n");
-        return NULL;
-    }
-
-    memset_s(sig, sizeof(lcp_ecc_signature_t) + 2*keysize, 0);
-    sig->ecc_signature.pubkey_size = keysize;
-    unsigned int BN_X_size = BN_num_bytes(x);
-    unsigned int BN_Y_size = BN_num_bytes(y); 
-    unsigned char key_X[BN_X_size];
-    unsigned char key_Y[BN_Y_size];
-    BN_bn2bin(x,key_X);
-    BN_bn2bin(y,key_Y);
-    for ( unsigned int i = 0; i < BN_X_size; i++ ) {
-        sig->ecc_signature.qx[i] = *(key_X + (BN_X_size -i - 1));
-    }
-
-    for ( unsigned int i = 0; i < BN_Y_size; i++ ) {
-        *(sig->ecc_signature.qx + BN_X_size + i) = *(key_Y + (BN_Y_size -i - 1));
-    }
-
-    if ( verbose ) {
-        LOG("read_ecdsa_pubkey_file: signature:\n");
-        display_tpm20_signature("    ", sig, TPM_ALG_ECDSA, false);
-    }
-
-    LOG("read ecdsa pubkey succeed!\n");
-    return sig;
-}
-
-static bool rsa_sign_list_data(lcp_policy_list_t2 *pollist, const char *privkey_file)
-{
-    LOG("rsa_sign_list_data\n");
-    if ( pollist == NULL || privkey_file == NULL )
-        return false;
-
-    lcp_signature_t2 *sig = get_tpm20_signature(pollist);
-    if ( sig == NULL )
-        return false;
-
-    if ( pollist->sig_alg == TPM_ALG_RSASSA) {
-        LOG("sign_tpm20_list_data: sig_alg == TPM_ALG_RSASSA\n");
-        /* read private key */
-        FILE *fp = fopen(privkey_file, "r");
-        if ( fp == NULL ) {
-            ERROR("Error: failed to open .pem file %s: %s\n", privkey_file,
-                    strerror(errno));
-            return false;
-        }   
-
-        RSA *privkey = PEM_read_RSAPrivateKey(fp, NULL, NULL, NULL);
-        fclose(fp);
-        if ( privkey == NULL ) {
-            ERR_load_crypto_strings();
-            ERROR("Error: failed to read .pem file %s: %s\n", privkey_file,
-                    ERR_error_string(ERR_get_error(), NULL));
-            ERR_free_strings();
-            return false;
-        }
-
-        if ( RSA_size(privkey) != sig->rsa_signature.pubkey_size ) {
-            ERROR("Error: private and public key sizes don't match\n");
-            RSA_free(privkey);
-            return false;
-        }
-        uint16_t    hashalg = TPM_ALG_SHA1;
-        lcp_mle_element_t2 *mle;
-        const lcp_policy_element_t *elt = pollist->policy_elements;
-        uint32_t    type = elt->type;
-        switch(type){
-            case LCP_POLELT_TYPE_MLE2 :
-                mle = (lcp_mle_element_t2 *)elt->data;
-                hashalg = mle->hash_alg;
-                LOG("mle hashalg= 0x%x\n", hashalg);
-                break;
-            default:
-                LOG("unknown element type\n");
-        }
-
-        /* first create digest of list (all except sig_block) */
-        tb_hash_t digest;
-        if ( !hash_buffer((const unsigned char *)pollist,
-                    get_tpm20_policy_list_size(pollist) - sig->rsa_signature.pubkey_size,
-                    &digest, hashalg) ) {
-            ERROR("Error: failed to hash list\n");
-            RSA_free(privkey);
-            return false;
-        }
-        if ( verbose ) {
-            LOG("digest: ");
-            print_hex("", &digest, get_hash_size(hashalg));
-        }
-
-        /* sign digest */
-        /* work on buffer because we need to byte swap before putting in policy */
-        uint8_t sigblock[sig->rsa_signature.pubkey_size];
-        unsigned int sig_len = sig->rsa_signature.pubkey_size;
-
-        int result = 0;
-        switch(hashalg){
-            case TPM_ALG_SHA1:
-                result = RSA_sign(NID_sha1, (const unsigned char *)&digest,
-                        get_hash_size(hashalg), sigblock,
-                        &sig_len, privkey);
-                break; 
-            case TPM_ALG_SHA256:
-                result = RSA_sign(NID_sha256, (const unsigned char *)&digest,
-                        get_hash_size(hashalg), sigblock,
-                        &sig_len, privkey);
-                break; 
-            case TPM_ALG_SHA384:
-                result = RSA_sign(NID_sha384, (const unsigned char *)&digest,
-                        get_hash_size(hashalg), sigblock,
-                        &sig_len, privkey);
-                break; 
-            case TPM_ALG_SHA512:
-                result = RSA_sign(NID_sha512, (const unsigned char *)&digest,
-                        get_hash_size(hashalg), sigblock,
-                        &sig_len, privkey);
-                break; 
-            default:
-                break;
-        } 
-        if ( !result ) {
-            ERR_load_crypto_strings();
-            ERROR("Error: failed to sign list: %s\n", 
-                    ERR_error_string(ERR_get_error(), NULL));
-            ERR_free_strings();
-            RSA_free(privkey);
-            return false;
-        }
-        if ( sig_len != sig->rsa_signature.pubkey_size ) {
-            ERROR("Error: signature length mismatch\n");
-            RSA_free(privkey);
-            return false;
-        }
-
-        RSA_free(privkey);
-
-        uint8_t *plsigblock = get_tpm20_sig_block(pollist);
-        if ( plsigblock == NULL ) {
-            ERROR("Error: list sig block not found\n");
-            return false;
-        }
-
-        /* sigblock is big-endian and policy needs little-endian, so reverse */
-        for ( unsigned int i = 0; i < sig->rsa_signature.pubkey_size; i++ )
-            *(plsigblock + i) = *(sigblock + (sig->rsa_signature.pubkey_size - i - 1));
-
-        if ( verbose ) {
-            LOG("signature:\n");
-            display_tpm20_signature("    ", sig, pollist->sig_alg, false);
-        }
-
-        return true;
-    }
-    return false;
-}
-
-static bool ecdsa_sign_tpm20_list_data(lcp_policy_list_t2 *pollist, EC_KEY *eckey)
-{
-    LOG("[ecdsa_sign_tpm20_list_data]\n");
-    if ( pollist == NULL || eckey == NULL )
-        return false;
-
-    lcp_signature_t2 *sig = get_tpm20_signature(pollist);
-    if ( sig == NULL )
-        return false;
-
-    if (pollist->sig_alg == TPM_ALG_ECDSA) {
-        LOG("ecdsa_sign_tpm20_list_data: sig_alg == TPM_ALG_ECDSA\n");
-        /* first create digest of list (all except sig_block) */
-        tb_hash_t digest;
-        if ( !hash_buffer((const unsigned char *)pollist,
-                    get_tpm20_policy_list_size(pollist) - sig->ecc_signature.pubkey_size,
-                    &digest, TB_HALG_SHA256) ) {
-            ERROR("Error: failed to hash list\n");
-            //   RSA_free(privkey);
-            return false;
-        }
-        if ( verbose ) {
-            LOG("digest: ");
-            print_hex("", &digest, get_hash_size(TB_HALG_SHA1));
-        }
-
-        /* sign digest */
-        /* work on buffer because we need to byte swap before putting in policy */
-        ECDSA_SIG *ecdsasig;
-        ecdsasig = ECDSA_do_sign((const unsigned char *)&digest, get_hash_size(TB_HALG_SHA256),eckey );
-        if ( ecdsasig == NULL) {
-            ERROR("Error: ECDSA_do_sign error\n");
-            return false;
-        }
-
-        const BIGNUM *r = NULL;
-        const BIGNUM *s = NULL; 
-
-	/* OpenSSL Version 1.1.0 and later don't allow direct access to 
-	   ECDSA_SIG stuct */ 
-        #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-            ECDSA_SIG_get0(ecdsasig, &r, &s);
-        #else
-    	    r = ecdsasig->r;
-    	    s = ecdsasig->s;
-        #endif
-	unsigned int BN_r_size = BN_num_bytes(r);
-        unsigned int BN_s_size = BN_num_bytes(s); 
-        unsigned char key_r[BN_r_size];
-        unsigned char key_s[BN_s_size];
-        BN_bn2bin(r,key_r);
-        BN_bn2bin(s,key_s);
-
-        uint8_t *plsigblock = get_tpm20_sig_block(pollist);
-        if ( plsigblock == NULL ) {
-            ERROR("Error: list sig block not found\n");
-            return false;
-        }
-
-        for ( unsigned int i = 0; i < BN_r_size; i++ ) {
-            *(plsigblock + i) = *(key_r + (BN_r_size -i - 1));
-        }
-
-        for ( unsigned int i = 0; i < BN_s_size; i++ ) {
-            *(plsigblock + BN_r_size + i) = *(key_s + (BN_s_size -i - 1));
-        }
-
-        if ( verbose ) {
-            display_tpm20_signature("    ", sig, pollist->sig_alg, false);
-        }
-
-        ECDSA_SIG_free(ecdsasig);
-        return true;
-    }
-    return false;
+    free(pollist);
+    return write_ok ? 0 : 1;
 }
 
 static int create(void)
 {
-    LOG("[create]\n");
-    if ( version != LCP_TPM20_POLICY_LIST_VERSION )
-        return 1;
+    lcp_list_t *pollist;
+    bool write_ok = false;
 
-    LOG("create:version=0x0200\n");
-    lcp_policy_list_t2 *pollist = create_empty_tpm20_policy_list();
-    if ( pollist == NULL )
+    LOG("[create]\n");
+    uint16_t major_ver = MAJOR_VER(version);
+    uint16_t minor_ver = MINOR_VER(version);
+    if ( major_ver != MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION) &&
+         major_ver != MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION) &&
+         major_ver != MAJOR_VER(LCP_TPM20_POLICY_LIST2_1_VERSION_300) ) {
+        ERROR("Error: only list versions 0x100, 0x200, 0x201 or 0x300 are supported\n");
         return 1;
+    }
+
+    switch (major_ver)
+    {
+    case MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION):
+        if (minor_ver > LCP_TPM12_POLICY_LIST_MAX_MINOR) {
+            ERROR("Error: minor version 0x%02x not supported\n", minor_ver);
+            return 1;
+        }
+        pollist = (lcp_list_t *) create_empty_tpm12_policy_list();
+        if (pollist == NULL)
+            return 1;
+        break;
+
+    case MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION):
+        if (minor_ver > LCP_TPM20_POLICY_LIST2_MAX_MINOR) {
+            ERROR("Error: minor version 0x%02x not supported\n", minor_ver);
+            return 1;
+        }
+        pollist = (lcp_list_t *) create_empty_tpm20_policy_list();
+        if ( pollist == NULL )
+            return 1;
+        pollist->tpm20_policy_list.version = version;
+        break;
+
+    case MAJOR_VER(LCP_TPM20_POLICY_LIST2_1_VERSION_300):
+        if (minor_ver > LCP_TPM20_POLICY_LIST2_1_MAX_MINOR) {
+            ERROR("Error: minor version 0x%02x not supported\n", minor_ver);
+            return 1;
+        }
+        return create_list_2_1();
+
+    default:
+        return 1;
+    }
 
     for ( unsigned int i = 0; i < nr_files; i++ ) {
         size_t len;
@@ -457,18 +261,23 @@ static int create(void)
             return 1;
         }
         if ( !verify_policy_element(elt, len) ) {
-            free(elt);
             free(pollist);
             return 1;
         }
-        pollist = add_tpm20_policy_element(pollist, elt);
-        if ( pollist == NULL ) {
-            free(elt);
+        if (major_ver == MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION))
+            pollist = (lcp_list_t*) add_tpm20_policy_element(&(pollist->tpm20_policy_list), elt);
+        else if (major_ver == MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION))
+            pollist = (lcp_list_t*) add_tpm12_policy_element(&(pollist->tpm12_policy_list), elt);
+        if ( pollist == NULL )
             return 1;
-        }
-        free(elt);
     }
-    bool write_ok = write_tpm20_policy_list_file(pollist_file, pollist);
+    if (major_ver == MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION))
+        write_ok = write_tpm20_policy_list_file(pollist_file,
+                                                &(pollist->tpm20_policy_list));
+    else if (major_ver == MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION))
+        write_ok = write_tpm12_policy_list_file(pollist_file,
+                                                &(pollist->tpm12_policy_list));
+
 
     free(pollist);
     return write_ok ? 0 : 1;
@@ -477,138 +286,69 @@ static int create(void)
 static int sign(void)
 {
     LOG("[sign]\n");
-
-    /* read existing policy list file */
-    bool no_sigblock_ok = true;
-    lcp_list_t *pollist = read_policy_list_file(pollist_file, false,
-            &no_sigblock_ok);
-    if ( pollist == NULL )
-        return 1;
-
-    uint16_t  version ;
-    memcpy_s((void*)&version, sizeof(uint16_t), (const void *)pollist, sizeof(uint16_t));
-    if ( version != LCP_TPM20_POLICY_LIST_VERSION ) {
-        free(pollist);
+    bool result;
+    void *file_data = read_file(pollist_file, NULL, false);
+    sign_user_input user_input;
+    if ( file_data == NULL ) {
         return 1;
     }
-
-    pollist->tpm20_policy_list.sig_alg = sigalg_type;
-    LOG("sign: version==0x0200,sig_alg=0x%x\n",pollist->tpm20_policy_list.sig_alg);
-    if ( pollist->tpm20_policy_list.sig_alg == TPM_ALG_RSASSA ) {
-        /* read public key file */
-        lcp_signature_t2 *sig = read_rsa_pubkey_file(pubkey_file);
-        if ( sig == NULL ) {
-            ERROR("Error: sign: version == 0x0200, sig == NULL\n");
-            free(pollist);
-            return 1;
-        }
-        /* check public key size */
-        if ( (sig->rsa_signature.pubkey_size != 128 /* 1024 bits */)
-                && (sig->rsa_signature.pubkey_size != 256 /* 2048 bits */)
-                && (sig->rsa_signature.pubkey_size != 384 /* 3072 bits */) ) {
-            ERROR("Error: public key size is not 1024/2048/3072 bits\n");
-            free(sig);
-            free(pollist);
-            return 1;
-        }
-
-        sig->rsa_signature.revocation_counter = rev_ctr;
-        pollist = (lcp_list_t *)add_tpm20_signature(&(pollist->tpm20_policy_list),
-                                        sig, TPM_ALG_RSASSA);
-        if ( pollist == NULL ) {
-            free(sig);
-            return 1;
-        }
-
-        if ( no_sigblock ) {
-            unsigned char *sigblock = get_tpm20_sig_block(&(pollist->tpm20_policy_list));
-            if ( sigblock == NULL ) {
-                ERROR("Error: failed to get signature block\n");
-                free(sig);
-                free(pollist);
-                return 1;
-            }
-            memset_s(sigblock, sig->rsa_signature.pubkey_size, 0);
+    //List version is first two bytes of the list file
+    memcpy_s((void*)&version, sizeof(uint16_t), (const void *)file_data, sizeof(uint16_t));
+    free(file_data); //We just need version
+    file_data = NULL;
+    //sign_user_input is used to pass some data from users to functions in
+    //pollis2.c and pollist2_1.c
+    user_input.sig_alg = sigalg_type;
+    user_input.hash_alg = hash_alg_cli;
+    user_input.rev_ctr = rev_ctr;
+    if (strcpy_s(user_input.list_file, MAX_PATH, pollist_file) != EOK) {
+        ERROR("Error: cannot open file.\n");
+        return 1;
+    }
+    if (strcpy_s(user_input.pubkey_file, MAX_PATH, pubkey_file) != EOK) {
+        ERROR("Error: cannot open file.\n");
+        return 1;
+    }
+    if (strcpy_s(user_input.privkey_file, MAX_PATH, privkey_file) != EOK) {
+        ERROR("Error: cannot open file.\n");
+        return 1;
+    }
+    if ( MAJOR_VER(version) == MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION) ) {
+        LOG("sign: LCP_POLICY_LIST,sig_alg=LCP_POLSALG_RSA_PKCS_15\n");
+        result = sign_lcp_policy_list_t(user_input);
+        if (result) {
+            DISPLAY("List signed succesfully and written to %s\n", user_input.list_file);
+            return 0;
         }
         else {
-            if ( !rsa_sign_list_data(&(pollist->tpm20_policy_list), privkey_file) ) {
-                free(sig);
-                free(pollist);
-                return 1;
-            }
+            DISPLAY("Failed to sign and write LCP list.\n");
+            return 1;
         }
-
-        bool write_ok = write_tpm20_policy_list_file(pollist_file,
-                                &(pollist->tpm20_policy_list));
-
-        free(sig);
-        free(pollist);
-        return write_ok ? 0 : 1;
     }
-    else if ( pollist->tpm20_policy_list.sig_alg == TPM_ALG_ECDSA ) {
-        LOG("sign: sig_alg == TPM_ALG_ECDSA\n");
-        EC_KEY *eckey = EC_KEY_new();
-        EC_GROUP *ecgroup = EC_GROUP_new_by_curve_name(NID_secp256k1);
-        EC_KEY_set_group(eckey,ecgroup);
-
-        if ( !EC_KEY_generate_key(eckey) ) {
-            ERROR("Error: EC_KEY_generate_key error\n");
-            free(pollist);
-            return 1;
-        }
-        const EC_POINT *pubkey = EC_KEY_get0_public_key(eckey);
-        if( pubkey == NULL) {
-            ERROR("Error: EC_KEY_get0_public_key error\n");
-            free(pollist);
-            return 1;
-        }
-
-        lcp_signature_t2 *sig = read_ecdsa_pubkey(pubkey, ecgroup);
-        if ( sig == NULL ) {
-            ERROR("Error: read_ecdsa_pubkey error\n");
-            free(pollist);
-            return 1;
-        }
-        sig->ecc_signature.revocation_counter = rev_ctr;
-        pollist = (lcp_list_t *)add_tpm20_signature(&(pollist->tpm20_policy_list),
-                                        sig, TPM_ALG_ECDSA);
-        if ( pollist == NULL ) {
-            free(sig);
-            return 1;
-        }
-
-        if ( no_sigblock ) {
-            unsigned char *sigblock = get_tpm20_sig_block(&(pollist->tpm20_policy_list));
-            if ( sigblock == NULL ) {
-                ERROR("Error: failed to get signature block\n");
-                free(sig);
-                free(pollist);
-                return 1;
-            }
-            memset_s(sigblock, sig->ecc_signature.pubkey_size, 0);
+    else if ( MAJOR_VER(version) == MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION) ) {
+        LOG("sign: LCP_POLICY_LIST2,sig_alg=0x%x\n", user_input.sig_alg);
+        result = sign_lcp_policy_list_t2(user_input);
+        if (result) {
+            DISPLAY("List signed succesfully and written to %s\n", user_input.list_file);
+            return 0;
         }
         else {
-            if ( !ecdsa_sign_tpm20_list_data(&(pollist->tpm20_policy_list), eckey) ) {
-                free(sig);
-                free(pollist);
-                return 1;
-            }
+            DISPLAY("Failed to sign and write LCP list.\n");
+            return 1;
         }
-
-        bool write_ok = write_tpm20_policy_list_file(pollist_file,
-                                &(pollist->tpm20_policy_list));
-
-        free(sig);
-        free(pollist);
-        return write_ok ? 0 : 1;
     }
-    else if ( pollist->tpm20_policy_list.sig_alg == TPM_ALG_SM2 ) {
-        LOG("sign: sig_alg == TPM_ALG_SM2\n");
-        free(pollist);
-        return 1;
+    else if ( MAJOR_VER(version) == MAJOR_VER(LCP_TPM20_POLICY_LIST2_1_VERSION_300)) {
+        LOG("sign: LCP_POLICY_LIST2_1,sig_alg=0x%x\n", user_input.sig_alg);
+        result = sign_lcp_policy_list_t2_1(user_input);
+        if (result) {
+            DISPLAY("List signed succesfully and written to %s\n", user_input.list_file);
+            return 0;
+        }
+        else {
+            DISPLAY("Failed to sign and write LCP list.\n");
+            return 1;
+        }
     }
-
-    free(pollist);
     return 1;
 }
 
@@ -616,17 +356,17 @@ static int addsig(void)
 {
     /* read existing policy list file */
     bool no_sigblock_ok = true;
-    lcp_list_t *pollist = read_policy_list_file(pollist_file, false,
-            &no_sigblock_ok);
+    lcp_list_t *pollist = read_policy_list_file(pollist_file, false, &no_sigblock_ok);
     if ( pollist == NULL )
         return 1;
 
     uint16_t  version ;
     memcpy_s((void*)&version, sizeof(uint16_t), (const void *)pollist, sizeof(uint16_t));
-    if (version != LCP_TPM20_POLICY_LIST_VERSION )
-        return 1;
+    if ( MAJOR_VER(version) == MAJOR_VER(LCP_TPM20_POLICY_LIST2_1_VERSION_300) ) {
+        DISPLAY("Not supported.\n");
+        return 0;
+    }
 
-    LOG("signature: version == 0x0200\n");
     lcp_signature_t2 *sig = get_tpm20_signature(&(pollist->tpm20_policy_list));
     if ( sig == NULL ) {
         free(pollist);
@@ -658,11 +398,7 @@ static int addsig(void)
 
     /* verify that this sigblock actually matches the policy list */
     LOG("verifying signature block...\n");
-    if ( !verify_signature((const unsigned char *)&(pollist->tpm20_policy_list),
-                get_tpm20_policy_list_size(&(pollist->tpm20_policy_list))
-                        - sig->rsa_signature.pubkey_size,
-                sig->rsa_signature.pubkey_value, sig->rsa_signature.pubkey_size,
-                data, false) ) {
+    if (!verify_tpm20_pollist_sig(&pollist->tpm20_policy_list)) {
         ERROR("Error: signature file does not match policy list\n");
         free(pollist);
         free(data);
@@ -701,32 +437,111 @@ static int show(void)
 {
     /* read existing file */
     bool no_sigblock_ok = true;
-    lcp_list_t *pollist = read_policy_list_file(files[0], false,
-            &no_sigblock_ok);
+    size_t file_len;
+    lcp_list_t *pollist = read_file(files[0], &file_len, true);
     if ( pollist == NULL )
         return 1;
 
-    uint16_t  version ;
+    uint16_t  version;
     memcpy_s((void*)&version, sizeof(uint16_t), (const void *)pollist, sizeof(uint16_t));
-    if (version != LCP_TPM20_POLICY_LIST_VERSION ) {
+    if (MAJOR_VER(version) == MAJOR_VER(LCP_TPM12_POLICY_LIST_VERSION) ) {
+        pollist = read_policy_list_file(files[0], false, &no_sigblock_ok);
+        if (pollist == NULL) {
+            ERROR("Error: failed to read policy list file.\n");
+            return 1;
+        }
+        LOG("show: version == 0x0100\n");
+        DISPLAY("policy list file: %s\n", files[0]);
+        display_tpm12_policy_list("", &(pollist->tpm12_policy_list), false);
         free(pollist);
+        return 0;
+    }
+    if (MAJOR_VER(version) == MAJOR_VER(LCP_TPM20_POLICY_LIST_VERSION) ) {
+        pollist = read_policy_list_file(files[0], false, &no_sigblock_ok);
+        if (pollist == NULL) {
+            ERROR("Error: failed to read policy list file.\n");
+            return 1;
+        }
+        LOG("show: version == 0x0200\n");
+        DISPLAY("policy list file: %s\n", files[0]);
+        display_tpm20_policy_list("", &(pollist->tpm20_policy_list), false);
+
+        if ( pollist->tpm20_policy_list.sig_alg == TPM_ALG_RSASSA &&
+            !no_sigblock_ok ) {
+            if ( verify_tpm20_pollist_sig(&(pollist->tpm20_policy_list)) )
+                DISPLAY("signature verified\n");
+            else
+                DISPLAY("failed to verify signature\n");
+        }
+
+        free(pollist);
+        return 0;
+        }
+    if (MAJOR_VER(version) == MAJOR_VER(LCP_TPM20_POLICY_LIST2_1_VERSION_300) ) {
+        lcp_policy_list_t2_1 *pollist = read_policy_list_2_1_file(false, files[0]);
+        if (pollist == NULL) {
+            ERROR("Error: failed to read policy list file.\n");
+            return 1;
+        }
+        LOG("show: version == 0x0300\n");
+        DISPLAY("policy list file: %s\n", files[0]);
+        display_tpm20_policy_list_2_1("", pollist, false);
+        return 0;
+    }
+    return 0;
+}
+
+static int verify(void)
+{
+    LOG("Verify policy list 2.1\n");
+    lcp_policy_list_t2_1 *pollist2_1 = NULL;
+    void *file_data = NULL;
+    size_t file_len;
+    uint16_t  version;
+
+    file_data = read_file(files[0], &file_len, true);
+    if (file_data == NULL) {
+        ERROR("Error: failed to read pollist file.\n");
         return 1;
     }
 
-    LOG("show: version == 0x0200\n");
-    DISPLAY("policy list file: %s\n", files[0]);
-    display_tpm20_policy_list("", &(pollist->tpm20_policy_list), false);
-
-    if ( pollist->tpm20_policy_list.sig_alg == LCP_POLSALG_RSA_PKCS_15 &&
-         !no_sigblock_ok ) {
-        if ( verify_tpm20_pollist_sig(&(pollist->tpm20_policy_list)) )
-            DISPLAY("signature verified\n");
-        else
-            DISPLAY("failed to verify signature\n");
+    memcpy_s((void*)&version, sizeof(uint16_t), file_data, sizeof(uint16_t));
+    free(file_data);
+    file_data = NULL;
+    if ( MAJOR_VER(version) == 1 ) {
+        LOG("Unsupported.\n");
+        return 0;
     }
-
-    free(pollist);
-    return 0;
+    else if ( MAJOR_VER(version) == 2 ){
+        LOG("Unsupported.\n");
+        return 0;
+    }
+    else if ( MAJOR_VER(version) == 3 ) {
+        bool result;
+        pollist2_1 = read_policy_list_2_1_file(false, files[0]);
+        if ( pollist2_1 == NULL ) {
+            ERROR("Error: failed to get policy list from file.\n");
+            return 1;
+        }
+        if ( pollist2_1->KeySignatureOffset == 0 ) {
+            DISPLAY("Verification successful. List is not signed. Exiting.\n");
+            free(pollist2_1);
+            return 0;
+        }
+        result = verify_tpm20_pollist_2_1_sig(pollist2_1);
+        if (!result) {
+            free(pollist2_1);
+            DISPLAY("List signature did not verify positively.\n");
+            return 0;
+        }
+        else {
+            free(pollist2_1);
+            DISPLAY("List signature correct. Verification successful\n");
+            return 0;
+        }
+    }
+    ERROR("Error: version unrecognized.\n");
+    return 1;
 }
 
 int main(int argc, char *argv[])
@@ -745,6 +560,8 @@ int main(int argc, char *argv[])
         case 'S':          /* sign */
         case 'A':          /* addsig */
         case 'W':          /* show */
+        case 'V':          /* verify */
+        case 'v':          /* version */
             if ( prev_cmd ) {
                 ERROR("Error: only one command can be specified\n");
                 return 1;
@@ -759,10 +576,20 @@ int main(int argc, char *argv[])
             LOG("cmdline opt: out: %s\n", pollist_file);
             break;
 
+        case 'h':
+            strlcpy(hash_alg_name, optarg, sizeof(hash_alg_name));
+            LOG("cmdline opt hash_alg: %s\n", hash_alg_name);
+            hash_alg_cli = str_to_hash_alg(hash_alg_name);
+            if (hash_alg_cli == TPM_ALG_NULL) {
+                ERROR("ERROR: incorrect hash alg specified");
+                return 1;
+            }
+            break;
+
         case 'a':
             strlcpy(sigalg_name, optarg, sizeof(sigalg_name));
             LOG("cmdline opt: sigalg: %s\n", sigalg_name);
-            sigalg_type = str_to_sig_alg(sigalg_name, version);
+            sigalg_type = str_to_sig_alg(sigalg_name);
             break;
 
         case 'u':            /* pub */
@@ -790,6 +617,19 @@ int main(int argc, char *argv[])
             LOG("cmdline opt: sigblock: %s\n", sig_file);
             break;
 
+        case 'l': /* listver */
+            version = strtoul(optarg, NULL, 16);
+            if (version) {
+                break;
+            }
+            else {
+                ERROR("Error: only list versions 0x100, 0x200, 0x201 or 0x300 " \
+                                                             "are supported\n");
+                return 1;
+            }
+        case 't':
+            verbose = true;
+            break;
         case 0:
         case -1:
             break;
@@ -820,6 +660,11 @@ int main(int argc, char *argv[])
             ERROR("Error: no policy list output file specified\n");
             return 1;
         }
+
+        if ( !version ) {
+            ERROR("ERROR: LCP list version not specified.\n");
+            return 1;
+        }
         return create();
     }
     else if ( cmd == 'S' ) {        /* --sign */
@@ -828,12 +673,15 @@ int main(int argc, char *argv[])
             ERROR("Error: no policy list output file specified\n");
             return 1;
         }
-        if ( sigalg_type == TPM_ALG_RSASSA || sigalg_type == LCP_POLSALG_RSA_PKCS_15 ) { 
+        if (sigalg_type == TPM_ALG_NULL) {
+            ERROR("Error: signature algorithm must be specified.\n");
+            return 1;
+        }
+        else {
             if ( *pubkey_file == '\0' ) {
                 ERROR("Error: no public key file specified\n");
                 return 1;
             }
-
             if ( no_sigblock ) {     /* no signature wanted */
                 if ( *privkey_file != '\0' ) {
                     ERROR("Error: private key file specified with --nosig option\n");
@@ -845,6 +693,15 @@ int main(int argc, char *argv[])
                     ERROR("Error: no private key file specified\n");
                     return 1;
                 }
+            }
+            if (sigalg_type != TPM_ALG_RSASSA &&
+                sigalg_type != TPM_ALG_ECDSA &&
+                sigalg_type != TPM_ALG_RSAPSS &&
+                sigalg_type != TPM_ALG_SM3_256 &&
+                sigalg_type != LCP_POLSALG_RSA_PKCS_15 &&
+                sigalg_type != TPM_ALG_SM2) {
+                ERROR("Error: Signature algorithm 0x%x unsupported.\n", sigalg_type);
+                return 1;
             }
         }
         return sign();
@@ -866,6 +723,18 @@ int main(int argc, char *argv[])
             return 1;
         }
         return show();
+    }
+    else if ( cmd == 'V') {  /*--verify*/
+        if ( *files[0] == '\0' ) {
+            ERROR("ERROR: no policy list file specified.");
+            return 1;
+        }
+        return verify();
+    }
+    else if ( cmd == 'v' ) { /* --version */
+        DISPLAY("lcp2_crtpollist version: %i.%i\nBuild date: %s", TOOL_VER_MAJOR,
+                                                    TOOL_VER_MINOR, __DATE__);
+        return 0;
     }
 
     ERROR("Error: unknown command\n");

@@ -77,6 +77,16 @@ static inline lcp_signature_t2 *get_tpm20_signature(const lcp_policy_list_t2 *po
                                pollist->policy_elements_size);
 }
 
+static inline lcp_signature_2_1 *get_tpm20_signature_2_1(
+                                            const lcp_policy_list_t2_1 *pollist)
+{
+    if (pollist == NULL || pollist->KeySignatureOffset == 0)
+        return NULL;
+
+    return (lcp_signature_2_1 *) ((const void *)&pollist->PolicyElements +
+                                    pollist->PolicyElementsSize);
+}
+
 static inline size_t get_tpm20_signature_size(const lcp_signature_t2 *sig,
                                               const uint16_t sig_alg)
 {
@@ -84,11 +94,11 @@ static inline size_t get_tpm20_signature_size(const lcp_signature_t2 *sig,
          return 0;
 
     if ( sig_alg == TPM_ALG_RSASSA)
-         return offsetof(lcp_rsa_signature_t, pubkey_value) +
+        return offsetof(lcp_rsa_signature_t, pubkey_value) +
                         2*sig->rsa_signature.pubkey_size;
     else if ( sig_alg == TPM_ALG_ECDSA)
         return offsetof(lcp_ecc_signature_t, qx) +
-                        2*sig->ecc_signature.pubkey_size;
+                        4*sig->ecc_signature.pubkey_size;
 
     return 0;
 }
@@ -110,6 +120,60 @@ static inline size_t get_tpm20_policy_list_size(const lcp_policy_list_t2 *pollis
         size += get_tpm20_signature_size(get_tpm20_signature(pollist),
                         pollist->sig_alg);
 
+    return size;
+}
+
+static inline size_t get_raw_tpm20_sig_2_1_size(const lcp_key_and_sig *key_and_sig) {
+
+    /*
+        Calculate key and signature size treating it as a contigous buffer (
+        i.e. read from file). Will return physical size of signature and key,
+        not size of lcp_key_and_sig structure.
+    */
+    typedef struct __packed {
+        uint8_t     Version;
+        uint16_t    KeyAlg;
+        uint8_t     Version2;
+        uint16_t    KeySize;
+    } sig_hdr;
+
+    sig_hdr *this_hdr = NULL;
+
+    if (key_and_sig == NULL) {
+        return 0;
+    }
+    
+    this_hdr = (sig_hdr *) key_and_sig;
+    if (this_hdr->KeyAlg == TPM_ALG_RSA) {
+        return sizeof(rsa_key_and_signature) -
+                                   2*(MAX_RSA_KEY_SIZE - (this_hdr->KeySize/8));
+    }
+    else if (this_hdr->KeyAlg == TPM_ALG_ECC) {
+        return sizeof(ecc_key_and_signature) -
+                                   4*(MAX_ECC_KEY_SIZE - (this_hdr->KeySize/8));
+    }
+    else {
+        return 0;
+    }
+}
+
+static inline size_t get_raw_tpm20_list_2_1_size(const lcp_policy_list_t2_1 *pollist)
+{
+    /*
+        Calculate size of a list in a contiguous buffer (i.e. read from file).
+    */
+    size_t size = 0;
+
+    if (pollist == NULL) {
+        return 0;
+    } 
+    if (pollist->KeySignatureOffset != 0) {
+        size = pollist->KeySignatureOffset +
+        get_raw_tpm20_sig_2_1_size((const lcp_key_and_sig *) ((void *) pollist+pollist->KeySignatureOffset));
+    }
+    else {
+        size = offsetof(lcp_policy_list_t2_1, PolicyElements) + pollist->PolicyElementsSize;
+    }
     return size;
 }
 

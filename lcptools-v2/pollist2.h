@@ -37,12 +37,15 @@
 #define __POLLIST2_H__
 
 extern lcp_list_t *read_policy_list_file(const char *file, bool fail_ok,
-                                                      bool *no_sigblock_ok);
-
+                                                          bool *no_sigblock_ok);
+extern bool sign_lcp_policy_list_t2(sign_user_input user_input);
+lcp_signature_t2 *read_rsa_pubkey_file(const char *file);
 extern bool verify_tpm20_policy_list(const lcp_policy_list_t2 *pollist, size_t size,
                                bool *no_sigblock, bool size_is_exact);
 extern void display_tpm20_policy_list(const char *prefix,
                                 const lcp_policy_list_t2 *pollist, bool brief);
+
+extern lcp_policy_list_t2_1 *create_empty_tpm20_policy_list_2_1(void);
 
 extern lcp_policy_list_t2 *create_empty_tpm20_policy_list(void);
 

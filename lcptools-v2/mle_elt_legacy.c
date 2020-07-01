@@ -1,5 +1,5 @@
 /*
- * mle_elt.c: MLE2 policy element (LCP_MLE_ELEMENT2) plugin
+ * mle_elt_legacy.c: MLE policy element (LCP_MLE_ELEMENT) plugin
  *
  * Copyright (c) 2014, Intel Corporation
  * All rights reserved.
@@ -54,15 +54,19 @@
 static uint8_t sinit_min_version;
 static unsigned int nr_hashes;
 static tb_hash_t hashes[MAX_HASHES];
-static char alg_name[32] = "sha1";
-static uint16_t alg_type = TPM_ALG_SHA1;
+static uint16_t alg_type = LCP_POLHALG_SHA1; //Legacy value for TPM 1.2
 
 static bool parse_mle_line(const char *line)
 {
+    bool result;
     if ( nr_hashes == MAX_HASHES )
         return false;
 
-    return parse_line_hashes(line, &hashes[nr_hashes++], alg_type);
+    result = parse_line_hashes(line, &hashes[nr_hashes++], alg_type);
+    if (!result) {
+        DISPLAY("Legacy mle element only supports sha1 hash digests.\n");
+    }
+    return result;
 }
 
 static bool cmdline_handler(int c, const char *opt)
@@ -72,13 +76,6 @@ static bool cmdline_handler(int c, const char *opt)
         LOG("cmdline opt: sinit_min_version: 0x%x\n", sinit_min_version);
         return true;
     }
-    else if (c == 'a') {
-        strlcpy(alg_name, opt,sizeof(alg_name));
-        alg_type = str_to_hash_alg(alg_name);
-        LOG("cmdline opt: hash alg: %s\n",alg_name);
-        return true;
-    }
-
     else if ( c != 0 ) {
         ERROR("Error: unknown option for mle type\n");
         return false;
@@ -95,64 +92,65 @@ static bool cmdline_handler(int c, const char *opt)
 static lcp_policy_element_t *create(void)
 {
     LOG("[create]\n");
-    size_t data_size =  sizeof(lcp_mle_element_t2) +
-        nr_hashes * get_hash_size(alg_type);
-    lcp_policy_element_t *elt = malloc(sizeof(*elt) + data_size);
+    size_t data_size;
+    lcp_policy_element_t *elt = NULL;
+    lcp_mle_element_t *mle = NULL;
+    lcp_hash_t *hash = NULL;
+
+    data_size = sizeof(lcp_mle_element_t) + (nr_hashes * SHA1_DIGEST_SIZE);
+    elt = calloc(1, sizeof(*elt) + data_size);
     if ( elt == NULL ) {
         ERROR("Error: failed to allocate element\n");
         return NULL;
     }
-
-    memset_s(elt, sizeof(*elt) + data_size, 0);
     elt->size = sizeof(*elt) + data_size;
-    lcp_mle_element_t2 *mle = (lcp_mle_element_t2 *)&elt->data;
+    mle = (lcp_mle_element_t *) &elt->data;
     mle->sinit_min_version = sinit_min_version;
-    mle->hash_alg = alg_type;
+    mle->hash_alg = LCP_POLHALG_SHA1; //Legacy value for TPM 1.2
     mle->num_hashes = nr_hashes;
-    lcp_hash_t2 *hash = mle->hashes;
-    for ( unsigned int i = 0; i < nr_hashes; i++ ) {
-        memcpy_s(hash, get_hash_size(alg_type), &hashes[i], get_hash_size(alg_type));
-        hash = (void *)hash + get_hash_size(alg_type);
+    hash = mle->hashes;
+    for (uint16_t i = 0; i < nr_hashes; i++) {
+        memcpy_s(hash, (nr_hashes - i) * SHA1_DIGEST_SIZE, &hashes[i],
+                                                              SHA1_DIGEST_SIZE);
+        hash = (void *) hash + SHA1_DIGEST_SIZE;
     }
-    LOG("create mle element succeed!\n");
+    LOG("Create legacy mle element success.\n");
     return elt;
 }
 
 static void display(const char *prefix, const lcp_policy_element_t *elt)
 {
-    lcp_mle_element_t2 *mle = (lcp_mle_element_t2 *)elt->data;
+    lcp_mle_element_t *mle = (lcp_mle_element_t *)elt->data;
 
     DISPLAY("%s sinit_min_version: 0x%x\n", prefix, mle->sinit_min_version);
     DISPLAY("%s hash_alg: %s\n", prefix, hash_alg_to_str(mle->hash_alg));
     DISPLAY("%s num_hashes: %u\n", prefix, mle->num_hashes);
 
     uint8_t *hash = (uint8_t *)&mle->hashes;
-    unsigned int hash_size = get_hash_size(mle->hash_alg);
     for ( unsigned int i = 0; i < mle->num_hashes; i++ ) {
         DISPLAY("%s hashes[%u]: ", prefix, i);
-        print_hex("", hash, hash_size);
-        hash += hash_size;
+        print_hex("", hash, SHA1_DIGEST_SIZE);
+        DISPLAY("\n");
+        hash += SHA1_DIGEST_SIZE;
     }
 }
 
 
 static struct option opts[] = {
     {"minver",         required_argument,    NULL,     'm'},
-    {"alg",            required_argument,    NULL,     'a'},
     {0, 0, 0, 0}
 };
 
 static polelt_plugin_t plugin = {
-    "mle2",
+    "mle",
     opts,
-    "      mle2\n"
-    "        Creates current LCP_ELEMENT_MLE2. Supports algorithm agility.\n"
+    "      mle\n"
+    "        Creates legacy LCP_ELEMENT_MLE. Only supports sha1.\n"
     "        [--minver <ver>]            minimum version of SINIT\n"
-    "        [--alg <sha1|sha256|sha384|sha512>]    hash alg of element\n"
     "        <FILE1> [FILE2] ...         one or more files containing MLE\n"
     "                                    hash(es); each file can contain\n"
     "                                    multiple hashes\n",
-    LCP_POLELT_TYPE_MLE2,
+    LCP_POLELT_TYPE_MLE,
     &cmdline_handler,
     &create,
     &display
