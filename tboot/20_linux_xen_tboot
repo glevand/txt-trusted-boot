@@ -120,7 +120,7 @@ linux_entry ()
   if ! ${recovery} ; then
       save_default_entry | sed -e "s/^/\t/"
   fi
-
+  printf "\tinsmod multiboot2\n"
   if [ -z "${prepare_boot_cache}" ]; then
     prepare_boot_cache="$(prepare_grub_to_access_device ${GRUB_DEVICE_BOOT} | sed -e "s/^/\t/")"
   fi
@@ -133,17 +133,17 @@ linux_entry ()
   lxargs=`merge_spaces root=${linux_root_device_thisversion} ro ${args}`
   cat << EOF
 	echo	'$tmessage'
-	multiboot	${rel_tboot_dirname}/${tboot_basename} ${tbargs}
+	multiboot2	${rel_tboot_dirname}/${tboot_basename} ${tbargs}
 	echo	'$xmessage'
-	module	${rel_xen_dirname}/${xen_basename} ${xnargs}
+	module2	${rel_xen_dirname}/${xen_basename} ${xnargs}
 	echo	'$lmessage'
-	module	${rel_dirname}/${basename} ${lxargs}
+	module2	${rel_dirname}/${basename} ${lxargs}
 EOF
   if test -n "${initrd}" ; then
     message="$(gettext_printf "Loading initial ramdisk ...")"
     cat << EOF
 	echo	'$message'
-	module	${rel_dirname}/${initrd}
+	module2	${rel_dirname}/${initrd}
 EOF
   fi
   if test -n "${sinit_list}" ; then
@@ -151,7 +151,7 @@ EOF
       message="$(gettext_printf "Loading sinit $i ...")"
       cat << EOF
         echo    '$message'
-        module  ${rel_dirname}/${i}
+        module2  ${rel_dirname}/${i}
 EOF
     done
   fi
@@ -159,7 +159,7 @@ EOF
     message="$(gettext_printf "Loading tboot policy data file ${poldata_file} ...")"
     cat << EOF
 	echo	'$message'
-	module  ${rel_dirname}/${poldata_file}
+	module2  ${rel_dirname}/${poldata_file}
 EOF
   fi
   cat << EOF

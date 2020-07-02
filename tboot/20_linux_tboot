@@ -119,8 +119,8 @@ linux_entry ()
       mb_mod_directive="module2"
       mb_extra_kernel="noefi"
   else
-      mb_directive="multiboot"
-      mb_mod_directive="module"
+      mb_directive="multiboot2"
+      mb_mod_directive="module2"
       mb_extra_kernel=""
   fi
 
@@ -128,9 +128,7 @@ linux_entry ()
   if ! ${recovery} ; then
       save_default_entry | sed -e "s/^/\t/"
   fi
-  if [ -d /sys/firmware/efi ] ; then
-      printf "\tinsmod multiboot2\n"
-  fi
+  printf "\tinsmod multiboot2\n"
   if [ -z "${prepare_boot_cache}" ]; then
     prepare_boot_cache="$(prepare_grub_to_access_device ${GRUB_DEVICE_BOOT} | sed -e "s/^/\t/")"
   fi
