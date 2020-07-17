@@ -74,41 +74,35 @@ extern size_t strlcpy(char *dst, const char *src, size_t siz);
 extern void print_hex(const char *prefix, const void *data, size_t n);
 extern void parse_comma_sep_ints(char *s, uint16_t ints[],
                                  unsigned int *nr_ints);
-
 extern void *read_file(const char *file, size_t *length, bool fail_ok);
 extern bool write_file(const char *file, const void *data, size_t size);
-
 extern bool parse_line_hashes(const char *line, tb_hash_t *hash, uint16_t alg);
-extern bool parse_file(const char *filename,
-		       bool (*parse_line)(const char *line));
-
+extern bool parse_file(const char *filename, bool (*parse_line)(const char *line));
 extern const char *hash_alg_to_str(uint16_t alg);
 extern const char *key_alg_to_str(uint16_t alg);
 extern const char *sig_alg_to_str(uint16_t alg);
-
 extern sized_buffer *allocate_sized_buffer(size_t size);
-
 uint16_t str_to_hash_alg(const char *str);
 uint16_t str_to_lcp_hash_mask(const char *str);
 uint16_t convert_hash_alg_to_mask(uint16_t hash_alg);
-
 uint16_t str_to_sig_alg(const char *str);
 uint32_t str_to_sig_alg_mask(const char *str, const uint16_t version, size_t size);
-
 uint16_t str_to_pol_ver(const char *str);
-
 size_t get_lcp_hash_size(uint16_t hash_alg);
 extern void buffer_reverse_byte_order(uint8_t *buffer, size_t length);
-
+extern bool ec_sign_data(sized_buffer *data, sized_buffer *r, sized_buffer *s, 
+                    uint16_t hashalg, uint16_t sigalg, const char *privkey_file);
 extern bool rsa_ssa_pss_sign(sized_buffer *sig_block, sized_buffer *data,
         uint16_t sig_alg, uint16_t hash_alg, EVP_PKEY_CTX *private_key_context);
-
-bool verify_ecdsa_signature(const unsigned char *data, size_t data_size,
-    const unsigned char *pubkey_x, const unsigned char *pubkey_y, size_t pubkey_size, 
-    const uint16_t hashalg, const unsigned char *sig_r, const unsigned char *sig_s);
+bool verify_ec_signature(sized_buffer *data, sized_buffer *pubkey_x, 
+                         sized_buffer *pubkey_y, sized_buffer *sig_r,
+                         sized_buffer *sig_s, uint16_t sigalg, uint16_t hashalg);
 bool verify_rsa_signature(sized_buffer *data, sized_buffer *pubkey, sized_buffer *signature,
                           uint16_t hashAlg, uint16_t sig_alg, uint16_t list_ver);
 EVP_PKEY_CTX *rsa_get_sig_ctx(const char *key_path, uint16_t key_size_bytes);
+unsigned char *der_encode_sig_comps(sized_buffer *sig_r, sized_buffer *sig_s, int *length);
+
+
 #endif    /* __LCPUTILS_H__ */
 
 

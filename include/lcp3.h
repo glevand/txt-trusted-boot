@@ -51,6 +51,10 @@
 /*--------- LCP FILE SIGNATURE ------------*/
 #define LCP_POLICY_DATA_FILE_SIGNATURE   "Intel(R) TXT LCP_POLICY_DATA\0\0\0\0"
 
+/*--------- SM2 Default ID value ---------*/
+#define SM2_ID '\0'
+#define SM2_ID_LEN 0
+
 /*--------- LCP Policy Type ------------*/
 #define LCP_POLTYPE_LIST    0
 #define LCP_POLTYPE_ANY     1

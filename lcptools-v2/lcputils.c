@@ -377,8 +377,6 @@ uint16_t str_to_sig_alg(const char *str) {
         return TPM_ALG_SM2;
     if( strcmp(str,"rsa-pss") == 0 || strcmp(str,"rsapss") == 0 )
         return TPM_ALG_RSAPSS;
-    if ( strcmp(str,"sm3") == 0)
-        return TPM_ALG_SM3_256;
     else {
         LOG("Unrecognized signature alg, assuming TPM_ALG_NULL");
         return TPM_ALG_NULL;
@@ -411,8 +409,7 @@ uint32_t str_to_sig_alg_mask(const char *str, const uint16_t version, size_t siz
         else if (strncmp(str, "ecdsa-p384", size) == 0) {
             return SIGN_ALG_MASK_ECDSA_P384;
         }
-        else if (strncmp(str, "sm3", size) == 0 ||
-                 strncmp(str, "sm2", size) == 0) {
+        else if (strncmp(str, "sm2", size) == 0) {
             return SIGN_ALG_MASK_SM2;
         }
         else if(strncmp(str, "0X", 2) || strncmp(str, "0x", 2)){
@@ -487,135 +484,6 @@ size_t get_lcp_hash_size(uint16_t hash_alg)
         return 0;
     }
     return 0;
-}
-
-bool verify_ecdsa_signature(const unsigned char *data, size_t data_size,
-    const unsigned char *pubkey_x, const unsigned char *pubkey_y, size_t pubkey_size, const uint16_t hashalg, 
-    const unsigned char *sig_r, const unsigned char *sig_s)
-/*
-This function: verifies ecdsa signature using pubkey (lists 2.0 and 2.1 only!)
-
-In: Data - digest of LCP policy list contents:
-
-    LCP_LIST_2_1: hash entire list up to KeyAndSignature field (that includes 
-        RevoCation counter) i.e. hash of KeyAndSignatureOffset bytes of the list.
-
-    LCP_LIST_2: hash of entire list up to the r member of the Signature field
-
-    data_size - size of digest (32 bytes for SHA256, 48 for SHA384)
-
-    pubkey_x - public key x coordinate (BE)
-
-    pubkey_y - public key y coordinate (BE)
-
-    hashAlg - hash algorithm used to create digest
-
-    sig_r and sig_s - buffers containing signature bytes BE
-
-    Out: true/false on verification success or failure
-*/
-{
-    ECDSA_SIG *ec_sig = NULL;
-    EC_KEY *ec_key = NULL;
-    EC_GROUP *ec_group = NULL;
-    BIGNUM *x = NULL;
-    BIGNUM *y = NULL;
-    BIGNUM *r = NULL;
-    BIGNUM *s = NULL;
-    int result;
-
-    LOG("[verify_ecdsa_signature]\n");
-    ec_key = EC_KEY_new();
-    if ( ec_key == NULL ) {
-        ERROR("ERROR: failed to generate EC_KEY.\n");
-        result = 0;
-        goto EXIT;
-    }
-
-    switch (hashalg)
-    {
-    case TPM_ALG_SHA256:
-        ec_group = EC_GROUP_new_by_curve_name(NID_secp256k1);
-        if ( ec_group == NULL) {
-            ERROR("Failed to generate new EC Group.\n");
-            goto OPENSSL_ERROR;
-        }
-        break;
-    case TPM_ALG_SHA384:
-        ec_group = EC_GROUP_new_by_curve_name(NID_secp384r1);
-        if ( ec_group == NULL) {
-            ERROR("Failed to allocate new EC Group.\n");
-            goto OPENSSL_ERROR;
-        }
-        break;
-    default:
-        ERROR("ERROR: incorrect hash alg.\n");
-        result = 0;
-        goto EXIT;
-    }
-    result = EC_KEY_set_group(ec_key, ec_group);
-    if ( result <= 0) {
-        ERROR("Failed to set EC Key group.\n");
-        goto OPENSSL_ERROR;
-    }
-    x = BN_bin2bn(pubkey_x, pubkey_size, NULL);
-    y = BN_bin2bn(pubkey_y, pubkey_size, NULL);
-    r = BN_bin2bn(sig_r, pubkey_size, NULL);
-    s = BN_bin2bn(sig_s, pubkey_size, NULL);
-    if ( x == NULL || y == NULL || r == NULL || s == NULL ) {
-        ERROR("Failed to convert buffer to OpenSSL BN.\n");
-        goto OPENSSL_ERROR;
-    }
-    result = EC_KEY_set_public_key_affine_coordinates(ec_key, x, y);
-    if ( result <= 0) {
-        ERROR("Failed to set key coordinates.\n");
-        goto OPENSSL_ERROR;
-    }
-    ec_sig = ECDSA_SIG_new();
-    if ( ec_sig == NULL) {
-        ERROR("Failed to allocate ECDSA signature.\n");
-        goto OPENSSL_ERROR;
-    }
-    result = ECDSA_SIG_set0(ec_sig, r, s);
-    if ( result <= 0) {
-        ERROR("Failed to set signature components.\n");
-        goto OPENSSL_ERROR;
-    }
-    result = ECDSA_do_verify(data, data_size, ec_sig, ec_key);
-    if ( result < 0 ) {
-        ERROR("Error verifying signature.\n");
-        goto OPENSSL_ERROR;
-    }
-    else if (result == 1) {
-        LOG("Verification successful.\n");
-        goto EXIT;
-    }
-    else {
-        LOG("Signature did not verify.\n");
-        goto EXIT;
-    }
-    return false;
-    OPENSSL_ERROR:
-        ERR_load_crypto_strings();
-        ERROR("OpenSSL error: %s\n",ERR_error_string(ERR_get_error(), NULL));
-        ERR_free_strings();
-        result = 0;
-    EXIT:
-        if (ec_sig != NULL)
-            OPENSSL_free((void *) ec_sig);
-        if (ec_key != NULL)
-            OPENSSL_free((void *) ec_key);
-        if (ec_group != NULL)
-            OPENSSL_free((void *) ec_group);
-        if (x != NULL)
-            OPENSSL_free((void *) x);
-        if (y != NULL)
-            OPENSSL_free((void *) y);
-        if (r != NULL)
-            OPENSSL_free((void *) r);
-        if (s != NULL)
-            OPENSSL_free((void *) s);
-        return result ? true : false;
 }
 
 bool verify_rsa_signature(sized_buffer *data, sized_buffer *pubkey, sized_buffer *signature,
@@ -793,6 +661,365 @@ Out: true/false on verification success or failure
         return status ? true : false;
 }
 
+bool verify_ec_signature(sized_buffer *data, sized_buffer *pubkey_x, 
+                         sized_buffer *pubkey_y, sized_buffer *sig_r,
+                         sized_buffer *sig_s, uint16_t sigalg, uint16_t hashalg)
+{
+     /*
+    This function: verifies ecdsa or SM2 signature using pubkey (lists 2.0 and 2.1 only!)
+
+    In: Data - LCP policy list contents:
+
+    LCP_LIST_2_1: entire list up to KeyAndSignature field (that includes 
+        RevoCation counter) i.e. hash of KeyAndSignatureOffset bytes of the list.
+
+    LCP_LIST_2: entire list up to the r member of the Signature field that is 
+                sizeof list - 2 * keysize
+
+    sized_buffers:
+    pubkey_x - public key x coordinate (must be BE) 
+    pubkey_y - public key y coordinate (must be BE)
+    sig_r and sig_s - buffers containing signature bytes BE
+
+    sigalg - signature algorithm used to sign list (must be ecdsa or sm2)
+    hashAlg - hash algorithm used to create digest
+
+    Out: true/false on verification success or failure
+*/
+    //Stuff to make key with:
+    BIGNUM *x = NULL;
+    BIGNUM *y = NULL;
+    EC_KEY *ec_key = NULL;
+    EC_GROUP *ec_group = NULL;
+    EVP_PKEY *evp_key = NULL;
+    const EVP_MD *mdtype; //Is freed when context is freed
+
+    //Der encoded signature:
+    const unsigned char *der_encoded_sig = NULL;
+    int encoded_len;
+    int curveId = 0;
+
+    //Contexts:
+    EVP_MD_CTX *mctx = NULL; //Message Digest Context
+    EVP_PKEY_CTX *pctx = NULL; //Key context   
+
+    //Other:
+    int result;
+
+    LOG("[verify_ec_signature]\n");
+    if (data == NULL || pubkey_x == NULL || pubkey_y == NULL ||
+        sig_r == NULL || sig_s == NULL) {
+            ERROR("Error: one or more buffers are not defined.\n");
+            return false;
+        }
+    ec_key = EC_KEY_new();
+    if (ec_key == NULL) {
+        ERROR("Error: failed to generate EC_KEY.\n");
+        result = 0;
+        goto EXIT;
+    }
+    evp_key = EVP_PKEY_new();
+    if (evp_key == NULL) {
+        ERROR("Error: failed to generate EC_KEY.\n");
+        result = 0;
+        goto EXIT;
+    }
+    switch (hashalg)
+    {
+    case TPM_ALG_SM3_256:
+        curveId = NID_sm2;
+        mdtype = EVP_sm3();
+        break;
+    case TPM_ALG_SHA256:
+        curveId = NID_secp256k1;
+        mdtype = EVP_sha256();
+        break;
+    case TPM_ALG_SHA384:
+        curveId = NID_secp384r1;
+        mdtype = EVP_sha384();
+        break;
+    default:
+        ERROR("Error: unsupported hashalg.\n");
+        result = 0;
+        goto EXIT;
+    }
+    ec_group = EC_GROUP_new_by_curve_name(curveId);
+    if (ec_group == NULL) {
+        ERROR("Error: failed to generate new EC_GROUP.\n");
+        goto OPENSSL_ERROR;
+    }
+    result = EC_KEY_set_group(ec_key, ec_group);
+    if ( result <= 0) {
+        ERROR("Failed to set EC Key group.\n");
+        goto OPENSSL_ERROR;
+    }
+    x = BN_bin2bn(pubkey_x->data, pubkey_x->size, NULL);
+    y = BN_bin2bn(pubkey_y->data, pubkey_y->size, NULL);
+    if ( x == NULL || y == NULL ) {
+        ERROR("Failed to convert buffer to OpenSSL BN.\n");
+        goto OPENSSL_ERROR;
+    }
+    result = EC_KEY_set_public_key_affine_coordinates(ec_key, x, y);
+    if ( result <= 0) {
+        ERROR("Failed to set key coordinates.\n");
+        goto OPENSSL_ERROR;
+    }
+    result = EVP_PKEY_assign_EC_KEY(evp_key, ec_key);
+    if (result <= 0) {
+        ERROR("Error: failed to assign EC KEY to EVP structure.\n");
+        goto OPENSSL_ERROR;
+    }
+    mctx = EVP_MD_CTX_new();
+    if (mctx == NULL) {
+        ERROR("Error: failed to generate message digest context.\n");
+        result = 0;
+        goto EXIT;
+    }
+    if (sigalg == TPM_ALG_SM2) {
+        result = EVP_PKEY_set_alias_type(evp_key, EVP_PKEY_SM2);
+        if (result <= 0) {
+            ERROR("Error: failed to set EVP KEY alias to SM2.\n");
+            goto OPENSSL_ERROR;
+        }
+    }
+    pctx = EVP_PKEY_CTX_new(evp_key, NULL);
+    if (pctx == NULL) {
+        ERROR("Error: failed to generate key context.\n");
+        result = 0;
+        goto EXIT;
+    }
+    if (sigalg == TPM_ALG_SM2) {
+        result = EVP_PKEY_CTX_set1_id(pctx, SM2_ID, SM2_ID_LEN);
+        if (result <= 0) {
+            ERROR("Error: failed to set sm2 id.\n");
+            goto OPENSSL_ERROR;
+        }
+    }
+    EVP_MD_CTX_set_pkey_ctx(mctx, pctx);
+    der_encoded_sig = der_encode_sig_comps(sig_r, sig_s, &encoded_len);
+    if (der_encoded_sig == NULL) {
+        ERROR("Error: failed to DER encode signature components.\n");
+        result = 0;
+        goto EXIT;
+    }
+    result = EVP_DigestVerifyInit(mctx, NULL, mdtype, NULL, evp_key);
+    if (result <= 0) {
+        ERROR("Error: error while verifying.\n");
+        goto OPENSSL_ERROR;
+    }
+    if (verbose) {
+        LOG("Data that was signed:\n");
+        print_hex("    ", data->data, data->size);
+    }
+    result = EVP_DigestVerifyUpdate(mctx, data->data, data->size);
+    if (result <= 0) {
+        ERROR("Error: error while verifying.\n");
+        goto OPENSSL_ERROR;
+    }
+    result = EVP_DigestVerifyFinal(mctx, der_encoded_sig, encoded_len);
+    if (result < 0) {
+        ERROR("Error: error while verifying.\n");
+        goto OPENSSL_ERROR;
+    }
+    goto EXIT; 
+    OPENSSL_ERROR:
+        ERR_load_crypto_strings();
+        ERROR("OpenSSL error: %s\n",ERR_error_string(ERR_get_error(), NULL));
+        ERR_free_strings();
+        result = 0;
+    EXIT:
+    //cleanup:
+        if (ec_key != NULL) {
+            OPENSSL_free((void *) ec_key);
+        }
+        if (evp_key != NULL) {
+            OPENSSL_free((void *) evp_key);
+        }
+        if (x != NULL) {
+            OPENSSL_free((void *) x);
+        }
+        if (y != NULL) {
+            OPENSSL_free((void *) y);
+        }
+        if (ec_group != NULL) {
+            OPENSSL_free((void *) ec_group);
+        }
+        if (der_encoded_sig != NULL) {
+            free((void *)der_encoded_sig);
+        }
+        if (mctx != NULL) {
+            OPENSSL_free(mctx);
+        }
+        if (pctx != NULL) {
+            OPENSSL_free(pctx);
+        }
+        return result ? true : false;
+}
+
+bool ec_sign_data(sized_buffer *data, sized_buffer *r, sized_buffer *s, uint16_t sigalg,
+                                        uint16_t hashalg, const char *privkey_file)
+{
+    /*
+    This function: Performs the signing operation on the policy list data 
+    using OpenSSL SM2 and ECDSA functions.
+
+    In: pointer to data to sign, poitners to buffers for r and s parts (must be BE),
+    sigalg to use (must be TPM_ALG_SM2/ECDSA), hashalg (must be 
+    TPM_ALG_SHA256/SHA384/SM3_256) path to private key.
+
+    Out: True on success, false on failure
+    */
+    int result;
+    size_t sig_length;
+    EC_KEY *ec_key = NULL;
+    EVP_PKEY *evp_key = NULL;
+    EVP_MD_CTX *mctx = NULL;
+    EVP_PKEY_CTX *pctx = NULL;
+    FILE *fp = NULL;
+    ECDSA_SIG *ecdsa_sig = NULL;
+    const BIGNUM *sig_r = NULL; //Is freed when ECDSA_SIG is freed
+    const BIGNUM *sig_s = NULL; //Is freed when ECDSA_SIG is freed
+    const unsigned char *signature_block = NULL;
+
+    LOG("[ec_sign_data]\n");
+    if (data == NULL || r == NULL || s == NULL) {
+        ERROR("Error: one or more data buffers not defined.\n");
+        return false;
+    }
+    mctx = EVP_MD_CTX_new();
+    if (mctx == NULL) {
+        ERROR("Error: failed to allocate message digest context.\n");
+        goto OPENSSL_ERROR;
+    }
+    fp = fopen(privkey_file, "r");
+    if ( fp == NULL ) {
+        ERROR("Error: failed to open file %s: %s\n", privkey_file, strerror(errno));
+        result = 0;
+        goto EXIT;
+    }
+    ec_key = PEM_read_ECPrivateKey(fp, NULL, NULL, NULL);
+    if (ec_key == NULL) {
+        ERROR("Error: failed to allocate EC key.\n");
+        goto OPENSSL_ERROR;
+    }
+    fclose(fp);
+    fp = NULL;
+    evp_key = EVP_PKEY_new();
+    if (evp_key == NULL) {
+        ERROR("Error: failed to allocate EVP key.\n");
+        goto OPENSSL_ERROR;
+    }
+    result = EVP_PKEY_assign_EC_KEY(evp_key, ec_key);
+    if (result <= 0) {
+        ERROR("Error: failed to assign EC key to EVP structure.\n");
+        goto OPENSSL_ERROR;
+    }
+
+    if (sigalg == TPM_ALG_SM2) {
+        result = EVP_PKEY_set_alias_type(evp_key, EVP_PKEY_SM2);
+        if (result <= 0) {
+            ERROR("Error: failed to assign SM2 alias to EVP key.\n");
+            goto OPENSSL_ERROR;
+        }
+    }
+    
+    pctx = EVP_PKEY_CTX_new(evp_key, NULL);
+    if (pctx == NULL) {
+        ERROR("Error: failed to allocate pkey context.\n");
+        goto OPENSSL_ERROR;
+    }
+    if (sigalg == TPM_ALG_SM2) {
+        result = EVP_PKEY_CTX_set1_id(pctx, SM2_ID, SM2_ID_LEN);
+        if (result <= 0) {
+            ERROR("Error: failed to allocate SM2 id.\n");
+            goto OPENSSL_ERROR;
+        }
+    }
+    EVP_MD_CTX_set_pkey_ctx(mctx, pctx);
+    switch (hashalg)
+    {
+    case TPM_ALG_SM3_256:
+        result = EVP_DigestSignInit(mctx, &pctx, EVP_sm3(), NULL, evp_key);
+        break;
+    case TPM_ALG_SHA256:
+        result = EVP_DigestSignInit(mctx, &pctx, EVP_sha256(), NULL, evp_key);
+        break;
+    case TPM_ALG_SHA384:
+        result = EVP_DigestSignInit(mctx, &pctx, EVP_sha384(), NULL, evp_key);
+        break;
+    default:
+        ERROR("Error: unsupported hashalg.\n");
+        return false;
+    }
+    if (result <= 0) {
+        ERROR("Error: failed to initialize signature.\n");
+        goto OPENSSL_ERROR;
+    }
+    result = EVP_DigestSignUpdate(mctx, data->data, data->size);
+    if (result <= 0) {
+        ERROR("Error: failed to update signature.\n");
+        goto OPENSSL_ERROR;
+    }
+    // Dry run, calculate length:
+    result = EVP_DigestSignFinal(mctx, NULL, &sig_length);
+    if (result <= 0 ) {
+        ERROR("Error: failed to comp=ute signature length.\n");
+        goto OPENSSL_ERROR;
+    }
+    signature_block = OPENSSL_malloc(sig_length);
+    if (signature_block == NULL) {
+        ERROR("Error: failed to allocate signature block.\n");
+        goto OPENSSL_ERROR;
+    }
+    result = EVP_DigestSignFinal(mctx, (unsigned char *) signature_block, &sig_length);
+    if (result <= 0) {
+        ERROR("Error: failed to comp=ute signature length.\n");
+        goto OPENSSL_ERROR;
+    }
+    // signature_block is DER encoded, we decode it:
+    ecdsa_sig = d2i_ECDSA_SIG(NULL, &signature_block, sig_length);
+    if (ecdsa_sig == NULL) {
+        ERROR("Error: failed to decode signature.\n");
+        goto OPENSSL_ERROR;
+    }
+    sig_r = ECDSA_SIG_get0_r(ecdsa_sig);
+    sig_s = ECDSA_SIG_get0_s(ecdsa_sig);
+    if (sig_r == NULL || sig_s == NULL ) {
+        ERROR("Error: failed to extract signature components.\n");
+        goto OPENSSL_ERROR;
+    }
+    BN_bn2bin(sig_r, r->data);
+    BN_bn2bin(sig_s, s->data);
+
+    goto EXIT;
+    OPENSSL_ERROR:
+        DISPLAY("Error.\n");
+        ERR_load_crypto_strings();
+        ERROR("OpenSSL error: %s\n", ERR_error_string(ERR_get_error(), NULL));
+        ERR_free_strings();
+        result = 0;
+    EXIT:
+        if (ec_key != NULL) {
+            OPENSSL_free((void *) ec_key);
+        }
+        if (evp_key != NULL) {
+            OPENSSL_free((void *) evp_key);
+        }
+        if (mctx != NULL) {
+            OPENSSL_free((void *) mctx);
+        }
+        if (pctx != NULL) {
+            OPENSSL_free((void *) pctx);
+        }
+        if (fp != NULL) {
+            fclose(fp);
+        }
+        if (ecdsa_sig != NULL) {
+            ECDSA_SIG_free(ecdsa_sig);
+        }
+        return result ? true : false;
+}
+
 EVP_PKEY_CTX *rsa_get_sig_ctx(const char *key_path, uint16_t key_size_bytes)
 {
     FILE *fp = NULL;
@@ -924,7 +1151,7 @@ uint16_t sig_alg, uint16_t hash_alg, EVP_PKEY_CTX *private_key_context)
     }
     //All good, function end
     return true;
-
+    
     //Error handling
     OPENSSL_ERROR:
         ERR_load_crypto_strings();
@@ -1021,6 +1248,61 @@ sized_buffer *allocate_sized_buffer(size_t size) {
         return NULL;
     }
     return buffer;
+}
+
+unsigned char *der_encode_sig_comps(sized_buffer *sig_r, sized_buffer *sig_s, int *length)
+{
+    //Buffers for signature (will be passed to EVP_Verify):
+    unsigned char *der_encoded_sig = NULL;
+    unsigned char *helper_ptr = NULL; //Will be adjusted by openssl api - orig value + sigsize
+    ECDSA_SIG *sig = NULL;
+    BIGNUM *r;
+    BIGNUM *s;
+    int encoded_size = 0;
+    LOG("[der_encode_sig_comps]\n");
+    r = BN_bin2bn(sig_r->data, sig_r->size, NULL);
+    s = BN_bin2bn(sig_s->data, sig_s->size, NULL);
+    if (r == NULL || s == NULL) {
+        ERROR("Error: failed to allocate signature componenst.\n");
+        goto EXIT;
+    }
+    sig = ECDSA_SIG_new();
+    if (sig == NULL) {
+        ERROR("Error: failed to allocate signature structure.\n");
+        goto EXIT;
+    }
+    if (!ECDSA_SIG_set0(sig, r, s)) {
+        ERROR("Error: failed to set signature components.\n");
+        goto EXIT;
+    }
+    encoded_size = i2d_ECDSA_SIG(sig, NULL);
+    if (!encoded_size) {
+        ERROR("Error: failed to calculate the size of encoded buffer.\n");
+        goto EXIT;
+    }
+    helper_ptr = OPENSSL_malloc(encoded_size);
+    der_encoded_sig = helper_ptr;
+    *length = encoded_size;
+    //i2d_ECDSA_SIG changes value of the pointer passed, that's why we first assigned
+    //it to der_encoded_sig, which will hold the encoded_sig.
+    if (!i2d_ECDSA_SIG(sig, &helper_ptr)) {
+        ERROR("Error: failed to encode signature.\n");
+        return NULL;
+    }
+    EXIT:
+        if (sig != NULL) {
+            ECDSA_SIG_free(sig);
+            //SIG_free also frees r and s
+            r = NULL;
+            s = NULL;
+        }
+        if (r != NULL) {
+            OPENSSL_free((void *) r);
+        }
+        if (s != NULL) {
+            OPENSSL_free((void *) s);
+        }
+        return der_encoded_sig;
 }
 
 /*

@@ -68,7 +68,7 @@ static const char help[] =
     "Usage: lcp2_crtpol <COMMAND> [OPTION]\n"
     "Create an Intel(R) TXT policy (and policy data file)\n\n"
     "--create\n"
-    "        --alg <sha1|sha256|sm3>    hash algorithm for the policy\n"
+    "        --alg <sha1|sha256|sha384|sm3>    hash algorithm for the policy\n"
     "                                   if polver < 3 - alg is always sha1\n"
     "        --type <any|list>          type\n"
     "        [--minver <ver>]           SINITMinVersion\n"
@@ -85,7 +85,7 @@ static const char help[] =
     "        [--auxalg]                 AUX allowed hash algorithm(s)\n"
     "                                   Not applicable for current LCP_POLICY v. 3.2\n"
     "        --sign                     <rsa-2048-sha1|rsa-2048-sha256|rsa-3072-sha256|\n"
-    "                                   rsa-3072-sha384|ecdsa-p256|ecdsa-p384|sm3>\n"
+    "                                   rsa-3072-sha384|ecdsa-p256|ecdsa-p384|sm2>\n"
     "                                   LCP allowed signing algorithm(s)\n"
     "                                   Can be used more than once\n"
     "        [--polver]                 LCP version:\n"
@@ -148,7 +148,7 @@ uint8_t        sinit_min_ver = 0;
 unsigned int   nr_rev_ctrs = 0;
 uint16_t       rev_ctrs[LCP_MAX_LISTS] = { 0 };
 uint32_t       policy_ctrl = LCP_DEFAULT_POLICY_CONTROL;
-uint32_t       lcp_sign_alg = SIGN_ALG_MASK_NULL;
+uint32_t       lcp_sign_alg_mask = SIGN_ALG_MASK_NULL;
 bool           brief = false;
 unsigned int   nr_files = 0;
 char           files[LCP_MAX_LISTS][MAX_PATH];
@@ -311,8 +311,9 @@ int create(void)
     pol->version = pol_ver;
     pol->hash_alg = lcp_hash_alg;
     pol->sinit_min_version = sinit_min_ver;
-    for ( unsigned int i = 0; i < nr_rev_ctrs; i++ )
+    for ( unsigned int i = 0; i < nr_rev_ctrs; i++ ) {
         pol->data_revocation_counters[i] = rev_ctrs[i];
+    }
     pol->max_sinit_min_ver = max_sinit_min_version;
     pol->policy_control = policy_ctrl;
 
@@ -323,13 +324,13 @@ int create(void)
         pol->aux_hash_alg_mask = aux_hash_alg;
     }
 
-    if(lcp_hash_mask == TPM_ALG_MASK_NULL){
+    if (lcp_hash_mask == TPM_ALG_MASK_NULL) {
         pol->lcp_hash_alg_mask = convert_hash_alg_to_mask(pol->hash_alg);
     }
     else{
         pol->lcp_hash_alg_mask = lcp_hash_mask;
     }
-    pol->lcp_sign_alg_mask = lcp_sign_alg;
+    pol->lcp_sign_alg_mask = lcp_sign_alg_mask;
 
     if ( strcmp(type, "any") == 0 ) {
         pol->policy_type = LCP_POLTYPE_ANY;
@@ -678,9 +679,9 @@ int main (int argc, char *argv[])
             else {
                 strlcpy(sign_alg_name, optarg, sizeof(sign_alg_name));
                 LOG("cmdline opt: sign: %s\n", sign_alg_name);
-                lcp_sign_alg |= str_to_sig_alg_mask(sign_alg_name, pol_ver, sizeof(sign_alg_name));
-                LOG("approved signature alg mask value: 0x%04X\n", lcp_sign_alg);
-                if ( lcp_sign_alg == SIGN_ALG_MASK_NULL) {
+                lcp_sign_alg_mask |= str_to_sig_alg_mask(sign_alg_name, pol_ver, sizeof(sign_alg_name));
+                LOG("approved signature alg mask value: 0x%04X\n", lcp_sign_alg_mask);
+                if ( lcp_sign_alg_mask == SIGN_ALG_MASK_NULL) {
                     ERROR("Error: signing alg not supported\n");
                     return 1;
                 }
@@ -731,11 +732,11 @@ int main (int argc, char *argv[])
         }
         LOG("pol_ver & 0xFF00 is 0x%x\n", lcp_major_version);
         if ( lcp_major_version == LCP_VER_2_0 ){
-            if ( lcp_sign_alg != SIGN_ALG_MASK_NULL) {
+            if ( lcp_sign_alg_mask != SIGN_ALG_MASK_NULL) {
                 LOG("Info: Signature algorithm mask not defined for LCPv2, specified mask is ignored.\n");
             }
         }
-        else if ( lcp_sign_alg == SIGN_ALG_MASK_NULL) {
+        else if ( lcp_sign_alg_mask == SIGN_ALG_MASK_NULL) {
             ERROR("Error: LCPv3 signing alg mask not supported or not specified\n");
             return 1;
         }
@@ -760,10 +761,12 @@ int main (int argc, char *argv[])
             ERROR("Error: list type but no policy lists specified\n");
             return 1;
         }
-        if (lcp_major_version == LCP_VER_3_0)
+        if (lcp_major_version == LCP_VER_3_0) {
             return create();
-        else if (lcp_major_version == LCP_VER_2_0)
+        }
+        else if (lcp_major_version == LCP_VER_2_0) {
             return create_legacy();
+        }
         else {
             ERROR("Error: policy must be version 3.x or 2.x\n");
             return 1;

@@ -96,7 +96,7 @@ static inline size_t get_tpm20_signature_size(const lcp_signature_t2 *sig,
     if ( sig_alg == TPM_ALG_RSASSA)
         return offsetof(lcp_rsa_signature_t, pubkey_value) +
                         2*sig->rsa_signature.pubkey_size;
-    else if ( sig_alg == TPM_ALG_ECDSA)
+    else if ( sig_alg == TPM_ALG_ECDSA || sig_alg == TPM_ALG_SM2)
         return offsetof(lcp_ecc_signature_t, qx) +
                         4*sig->ecc_signature.pubkey_size;
 

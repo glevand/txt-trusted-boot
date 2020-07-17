@@ -112,6 +112,10 @@ bool hash_buffer(const unsigned char* buf, size_t size, tb_hash_t *hash,
             md = EVP_sha512();
             hash_out = hash->sha512;
             break;
+        case TB_HALG_SM3:
+            md = EVP_sm3();
+            hash_out = hash->sm3;
+            break;
         default:
             error_msg("unsupported hash alg (%d)\n", hash_alg);
             return false;

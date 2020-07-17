@@ -59,13 +59,13 @@
 #include "pollist1.h"
 
 //F-ction prototypes:
-static bool verify_tpm20_ecdsa_sig(const lcp_policy_list_t2 *pollist, uint16_t keySize);
+bool verify_tpm20_ec_sig(const lcp_policy_list_t2 *pollist); //Does both ecdsa and sm2
 static bool verify_tpm20_rsa_sig(const lcp_policy_list_t2 *pollist);
 static lcp_signature_t2 *read_ecdsa_pubkey(const char *pubkey_file);
-static bool ecdsa_sign_list2_data(lcp_policy_list_t2 *pollist, const char* privkey_file);
 static bool rsa_sign_list2_data(lcp_policy_list_t2 *pollist, const char *privkey_file, 
                                                               uint16_t hash_alg);
-static lcp_policy_list_t2 *policy_list2_ecdsa_sign_init(lcp_policy_list_t2 *pollist,
+static lcp_policy_list_t2 *policy_list2_ec_sign_init(lcp_policy_list_t2 *pollist,
+                                            uint16_t sig_alg,
                                             uint16_t rev_ctr,
                                             const char *pubkey_file,
                                             const char *privkey_file);
@@ -221,19 +221,15 @@ bool verify_tpm20_policy_list(const lcp_policy_list_t2 *pollist, size_t size,
             return false;
         }
     }
-    else if ( pollist->sig_alg == TPM_ALG_ECDSA) {
+    else if ( pollist->sig_alg == TPM_ALG_ECDSA || pollist->sig_alg == TPM_ALG_SM2) {
         LOG("verify_tpm20_policy_list: sig_alg == TPM_ALG_ECDSA\n");
         if ( base_size + sizeof(lcp_ecc_signature_t) +
                 pollist->policy_elements_size  > size ) {
             ERROR("Error: size incorrect (sig min): 0x%x > 0x%x\n",
-                    base_size + sizeof(lcp_rsa_signature_t) +
+                    base_size + sizeof(lcp_ecc_signature_t) +
                     pollist->policy_elements_size, size);
             return false;
         }
-    }
-    else if ( pollist->sig_alg == TPM_ALG_SM2 ) {
-        LOG ("verify_tpm20_policy_list: sig_alg == TPM_ALG_SM2\n");
-        return false;
     }
 
     /* verify sum of policy elements' sizes */
@@ -417,66 +413,115 @@ bool del_tpm20_policy_element(lcp_policy_list_t2 *pollist, uint32_t type)
     return false;
 }
 
-bool verify_tpm20_ecdsa_sig(const lcp_policy_list_t2 *pollist, uint16_t keySize)
+bool verify_tpm20_ec_sig(const lcp_policy_list_t2 *pollist) 
 {
-    /*This function prepares signature and key buffers that are later passed
-    to the function that does actual verification.*/
-    size_t bytes_to_hash;
-    size_t digest_size;
-    uint16_t hash_alg;
+    /*
+        This functions prepares lcp policy list for verification, i.e.
+        generates buffers for list data, public key components, signature
+        components and passes all of it to ec_verify in lcputils
+
+        In: pointer to properly allocated lcp_policy_list_t2 structure
+            containig list and signature.
+
+        Out: True on success, false on failure
+    */
+    sized_buffer *pollist_data = NULL;
+    sized_buffer *pubkey_x = NULL;
+    sized_buffer *pubkey_y = NULL;
+    sized_buffer *sig_r = NULL;
+    sized_buffer *sig_s = NULL;
+    lcp_signature_t2 *sig = NULL;
+    size_t pollist_data_size, keysize;
     bool result;
-    unsigned char qx[keySize];
-    unsigned char qy[keySize];
-    unsigned char r_part[keySize];
-    unsigned char s_part[keySize];
-    tb_hash_t digest;
-    lcp_ecc_signature_t *sig = NULL;
-    LOG("[verify_tpm20_ecdsa_sig]\n");
+    uint16_t sigalg;
+    uint16_t hashalg;
+    LOG("[verify_tpm20_ec_sig]\n");
     if (pollist == NULL) {
-        ERROR("Error: policy list not defined.\n");
+        ERROR("Error: policy list is not defined.\n");
         return false;
     }
-    if (keySize != MIN_ECC_KEY_SIZE && keySize != MAX_ECC_KEY_SIZE) {
+    sigalg = pollist->sig_alg;
+    sig = get_tpm20_signature(pollist);
+    if (sig == NULL) {
+        ERROR("Error: failed to get signature.\n");
+        return false;
+    }
+    keysize = sig->ecc_signature.pubkey_size;
+    if (keysize != MIN_ECC_KEY_SIZE && keysize != MAX_ECC_KEY_SIZE) {
         ERROR("Error: incorrect key size.\n");
         return false;
     }
-    sig = (lcp_ecc_signature_t *) get_tpm20_signature(pollist);
-    if (sig->pubkey_size != keySize) {
-        ERROR("Error: sig->pubkey_size and keySize parameter are not the same.\n");
-        return false;
+    //Set hashalg - sm3 for sm2 sigs, sha384 for 384 bit keys and sha256 for 256 bit keys
+    if (sigalg == TPM_ALG_SM2) {
+        hashalg = TPM_ALG_SM3_256;
     }
-    if (keySize == MIN_ECC_KEY_SIZE) {
-        hash_alg = TPM_ALG_SHA256;
-        digest_size = SHA256_DIGEST_SIZE;
+    else if (keysize == MIN_ECC_KEY_SIZE){ // 32
+        hashalg = TPM_ALG_SHA256;
     }
     else {
-        hash_alg = TPM_ALG_SHA384;
-        digest_size = SHA384_DIGEST_SIZE;
+        hashalg = TPM_ALG_SHA384;
     }
-    bytes_to_hash = get_tpm20_policy_list_size(pollist) - (2*sig->pubkey_size);
-    result = hash_buffer((const unsigned char *) pollist, bytes_to_hash, &digest, hash_alg);
+    //Data from beginning of the list up to but not including the signature.
+    pollist_data_size = get_tpm20_policy_list_size(pollist) - (2 * keysize);
+    pollist_data = allocate_sized_buffer(pollist_data_size);    
+    pubkey_x = allocate_sized_buffer(keysize);
+    pubkey_y = allocate_sized_buffer(keysize);
+    sig_r = allocate_sized_buffer(keysize);
+    sig_s = allocate_sized_buffer(keysize);
+    if (pollist_data == NULL || pubkey_x == NULL || pubkey_y == NULL || 
+        sig_r == NULL || sig_s == NULL) {
+            ERROR("Error: failed to allocate data structure.\n");
+            result = false;
+            goto EXIT;
+    }
+    pollist_data->size = pollist_data_size;
+    pubkey_y->size = keysize;
+    pubkey_x->size = keysize;
+    sig_r->size = keysize;
+    sig_s->size = keysize;
+    //Copy data to buffers, in sig structure qx is contiguous and contains x, y, r and s
+    //each comp is keysize long
+    memcpy_s((void *) pubkey_x->data, pubkey_x->size, 
+            (const void *) sig->ecc_signature.qx, keysize);
+    memcpy_s((void *) pubkey_y->data, pubkey_y->size, 
+          (const void *) sig->ecc_signature.qx + keysize, keysize);
+    memcpy_s((void *) sig_r->data, sig_r->size, 
+             (const void *) sig->ecc_signature.qx + (2 * keysize), keysize);
+    memcpy_s((void *) sig_s->data, sig_s->size, 
+             (const void *) sig->ecc_signature.qx + (3 * keysize), keysize);
+    memcpy_s((void *) pollist_data->data, pollist_data->size,
+            (const void *) pollist, pollist_data_size);
+    
+    //r, s, x, y are LE in lcp but openssl needs them BE, so we will flip them.
+    buffer_reverse_byte_order((uint8_t *) pubkey_x->data, pubkey_x->size);
+    buffer_reverse_byte_order((uint8_t *) pubkey_y->data, pubkey_y->size);
+    buffer_reverse_byte_order((uint8_t *) sig_r->data, sig_r->size);
+    buffer_reverse_byte_order((uint8_t *) sig_s->data, sig_s->size);
+    //Now verify
+    result = verify_ec_signature(pollist_data, pubkey_x, pubkey_y, sig_r, sig_s, sigalg, hashalg);
     if (!result) {
-        ERROR("Error: failed to hash list data.\n");
-        return false;
+        ERROR("Error: failed to verify SM2 signature.\n");
     }
-    //Copy key and sig buffers to arrays
-    memcpy_s((void *)qx, keySize, (void *)sig->qx, keySize);
-    memcpy_s((void *)qy, keySize, (void *)sig->qx+keySize, keySize);
-    memcpy_s((void *)r_part, keySize, (void *)sig->qx+(2*keySize), keySize);
-    memcpy_s((void *)s_part, keySize, (void *)sig->qx+(3*keySize), keySize);
-    //Reverse arrays because openssl needs BE data
-    buffer_reverse_byte_order(qx, keySize);
-    buffer_reverse_byte_order(qy, keySize);
-    buffer_reverse_byte_order(r_part, keySize);
-    buffer_reverse_byte_order(s_part, keySize);
-    return verify_ecdsa_signature((const unsigned char *) &digest, digest_size,
-                                     qx, qy, keySize, hash_alg, r_part, s_part);
+    EXIT:
+        if (pollist_data != NULL) {
+            free(pollist_data);
+        }
+        if (pubkey_x != NULL) {
+            free(pubkey_x);
+        }
+        if (pubkey_y != NULL) {
+            free(pubkey_y);
+        }
+        if (sig_r != NULL) {
+            free(sig_r);
+        }
+        if (sig_s != NULL) {
+            free(sig_s);
+        }
+        return result;
 }
 
 bool verify_tpm20_rsa_sig(const lcp_policy_list_t2 *pollist)
-/*
-
-*/
 {
     sized_buffer *list_data = NULL;
     sized_buffer *public_key = NULL;
@@ -554,14 +599,9 @@ bool verify_tpm20_pollist_sig(const lcp_policy_list_t2 *pollist)
     if ( pollist->sig_alg == TPM_ALG_RSASSA ) {
         return verify_tpm20_rsa_sig(pollist);
     }
-    else if ( pollist->sig_alg == TPM_ALG_ECDSA ) {
-        return verify_tpm20_ecdsa_sig(pollist, sig->ecc_signature.pubkey_size);
+    else if ( pollist->sig_alg == TPM_ALG_ECDSA || pollist->sig_alg == TPM_ALG_SM2) {
+        return verify_tpm20_ec_sig(pollist);
     }
-    else if ( pollist->sig_alg == TPM_ALG_SM2 ) {
-        LOG("verify_tpm20_pollist_sig: sig_alg == TPM_ALG_SM2\n");
-        return false;
-    }
-
     return false;
 }
 
@@ -590,7 +630,7 @@ void display_tpm20_signature(const char *prefix, const lcp_signature_t2 *sig,
         print_hex(new_prefix, (void *)&sig->rsa_signature.pubkey_value +
                 sig->rsa_signature.pubkey_size, sig->rsa_signature.pubkey_size);
     }
-    else if ( sig_alg == TPM_ALG_ECDSA ) {
+    else if ( sig_alg == TPM_ALG_ECDSA || sig_alg == TPM_ALG_SM2) { //Same for both
         char new_prefix[strnlen_s(prefix, 20)+8];
         strcpy_s(new_prefix, sizeof(new_prefix), prefix);
         strcat_s(new_prefix, sizeof(new_prefix), "\t");
@@ -619,9 +659,6 @@ void display_tpm20_signature(const char *prefix, const lcp_signature_t2 *sig,
         DISPLAY("%s s:\n", prefix);
         print_hex(new_prefix, (void *)&sig->ecc_signature.qx +
                 (3*sig->ecc_signature.pubkey_size), sig->ecc_signature.pubkey_size);
-    }
-    else if ( sig_alg == TPM_ALG_SM2 ) {
-        LOG("display_tpm20_signature: sig_alg == TPM_ALG_SM2\n");
     }
 }
 
@@ -660,8 +697,9 @@ lcp_policy_list_t2 *add_tpm20_signature(lcp_policy_list_t2 *pollist,
         new_pollist->sig_alg = sig_alg;
         return new_pollist;
     }
-    else if ( sig_alg == TPM_ALG_ECDSA ) {
-        LOG("add_tpm20_signature: sig_alg == TPM_ALG_ECDSA\n");
+    //Also works with SM2
+    else if ( sig_alg == TPM_ALG_ECDSA || sig_alg == TPM_ALG_SM2 ) {
+        LOG("add_tpm20_signature: sig_alg == %s\n", sig_alg_to_str(sig_alg));
         /* adding a signature requires growing the policy list */
         size_t old_size = get_tpm20_policy_list_size(pollist);
         size_t sig_size = sizeof(lcp_ecc_signature_t) +
@@ -685,10 +723,6 @@ lcp_policy_list_t2 *add_tpm20_signature(lcp_policy_list_t2 *pollist,
         new_pollist->sig_alg = sig_alg;
         LOG("add tpm20 signature succeed!\n");
         return new_pollist;
-    }
-    else if ( sig_alg == TPM_ALG_SM2 ) {
-        LOG("add_tpm20_signature: sig_alg == TPM_ALG_SM2\n");
-        return NULL;
     }
     return NULL;
 }
@@ -720,6 +754,11 @@ unsigned char *get_tpm20_sig_block(const lcp_policy_list_t2 *pollist)
 void calc_tpm20_policy_list_hash(const lcp_policy_list_t2 *pollist,
         lcp_hash_t2 *hash, uint16_t hash_alg)
 {
+    /*
+        Calculate hash of this list.
+        If unsigned - hash entire list.
+        If signed - hash public key (rsa) or hash Qx and Qy (ec)
+    */
     LOG("[calc_tpm20_policy_list_hash]\n");
     uint8_t *buf_start = (uint8_t *)pollist;
     size_t len = get_tpm20_policy_list_size(pollist);
@@ -732,15 +771,15 @@ void calc_tpm20_policy_list_hash(const lcp_policy_list_t2 *pollist,
         buf_start = sig->rsa_signature.pubkey_value;
         len = sig->rsa_signature.pubkey_size;
     }
-    else if ( pollist->sig_alg == TPM_ALG_ECDSA ) {
+    else if ( pollist->sig_alg == TPM_ALG_ECDSA || pollist->sig_alg == TPM_ALG_SM2) {
         LOG("calc_tpm20_policy_list_hash: sig_alg == TPM_ALG_ECDSA\n");
+        //Hash Qx and Qy
         lcp_signature_t2 *sig = get_tpm20_signature(pollist);
         if ( sig == NULL )
             return;
-        buf_start = sig->ecc_signature.qx + sig->ecc_signature.pubkey_size;
-        len = sig->ecc_signature.pubkey_size;
+        buf_start = sig->ecc_signature.qx;
+        len = 2 * sig->ecc_signature.pubkey_size;
     }
-
     hash_buffer(buf_start, len, (tb_hash_t *)hash, hash_alg);
 }
 
@@ -855,7 +894,7 @@ lcp_signature_t2 *read_ecdsa_pubkey(const char *pubkey_file)
     uint16_t keySizeBytes;
     int result;
 
-    LOG("read ecdsa pubkey file for signature 2.1.\n");
+    LOG("read ecdsa pubkey file for list signature.\n");
     fp = fopen(pubkey_file, "r");
     if ( fp == NULL) {
         ERROR("ERROR: cannot open file.\n");
@@ -993,198 +1032,100 @@ lcp_signature_t2 *read_ecdsa_pubkey(const char *pubkey_file)
             OPENSSL_free((void *) y);
         return NULL;
 }
-
-bool ecdsa_sign_list2_data(lcp_policy_list_t2 *pollist, const char* privkey_file)
+bool ec_sign_list2_data(lcp_policy_list_t2 *pollist, const char *privkey) 
 {
     /*
-    This function: Performs the signing operation on the policy list data 
-    using OpenSSL functions.
+        This function: prepares lcp_policy_list_t2 structure for signing
+        using private key file. Signing in ecdsa or sm2
 
-    In: pointer to policy list structure to sign, path to private key
+        In: pointer to correctly allocated policy list structure, path to private
+        key
 
-    Out: True on success, false on failure
+        Out: true on success, false on failure.
     */
-
-    LOG("[ecdsa_sign_tpm20_list_data]\n");
-
+    sized_buffer *sig_r = NULL;
+    sized_buffer *sig_s = NULL;
+    sized_buffer *pollist_data = NULL;
     lcp_signature_t2 *sig = NULL;
-    FILE *fp = NULL;
-    EC_KEY *ec_priv = NULL;
-    EVP_PKEY *evp_priv_key = NULL;
-    ECDSA_SIG *ecdsasig = NULL;
-    const BIGNUM *r = NULL;
-    const BIGNUM *s = NULL;
-    tb_hash_t digest;
-    size_t digest_size;
-    size_t bytes_to_hash_num;
-    uint16_t hashalg;
-    uint16_t keysize;
-    uint16_t BN_r_size;
-    uint16_t BN_s_size;
-    int evp_size;
-    int status; //For openssl that return ints status
     bool result;
-    unsigned char *sig_r = NULL;
-    unsigned char *sig_s = NULL;
+    size_t pollist_data_size, keysize;
+    uint16_t sigalg;
+    uint16_t hashalg;
 
+    LOG("[ec_sign_list2_data]\n");
     if (pollist == NULL) {
-        ERROR("Error: policy list not initialized.\n");
-        return NULL;
+        ERROR("Error: policy list is not defined.\n");
+        return false;
     }
     sig = get_tpm20_signature(pollist);
-    if ( sig == NULL) {
-        ERROR("ERROR: failed to get lcp signature.\n");
-        goto ERROR;
+    if (sig == NULL) {
+        ERROR("Error: failed to read signature.\n");
+        result = false;
+        goto EXIT;
     }
+    //Set hashalgs, sm2 gets sm3, ecdsa sha256 or sha384 depending on key size
+    switch (pollist->sig_alg)
+    {
+    case TPM_ALG_ECDSA:
+        hashalg = (sig->ecc_signature.pubkey_size == 32) ? TPM_ALG_SHA256 : TPM_ALG_SHA384;
+        break;
+    case TPM_ALG_SM2:
+        hashalg = TPM_ALG_SM3_256;
+        break;
+    default:
+        ERROR("Error: unsupported signature algorithm.\n");
+        result = false;
+        goto EXIT;
+    }
+    sigalg = pollist->sig_alg;
+    keysize = sig->ecc_signature.pubkey_size;
+    pollist_data_size = get_tpm20_policy_list_size(pollist) - (2 * keysize);
 
-    keysize = sig->ecc_signature.pubkey_size; //Is in bytes
-    if (keysize == MIN_ECC_KEY_SIZE) {
-        hashalg = TPM_ALG_SHA256;
-        digest_size = SHA256_DIGEST_SIZE;
-    }
-    else {
-        hashalg = TPM_ALG_SHA384;
-        digest_size = SHA384_DIGEST_SIZE;
-    }
+    sig_r = allocate_sized_buffer(keysize);
+    sig_s = allocate_sized_buffer(keysize);
+    pollist_data = allocate_sized_buffer(pollist_data_size);
 
-    fp = fopen(privkey_file, "r");
-    if ( fp == NULL ) {
-        ERROR("Error: failed to open .pem file %s: %s\n", privkey_file,
-        strerror(errno));
-        goto ERROR;
+    if (sig_r == NULL || sig_s == NULL || pollist_data == NULL) {
+        ERROR("Error: failed to allocate data buffers.\n");
+        result = false;
+        goto EXIT;
     }
-    //Init evp private key
-    ec_priv = PEM_read_ECPrivateKey(fp, NULL, NULL, NULL);
-    if ( ec_priv == NULL) {
-        goto OPENSSL_ERROR;
-    }
-    //Close file
-    fclose(fp);
-    fp = NULL;
-
-    evp_priv_key = EVP_PKEY_new();
-    if (evp_priv_key == NULL) {
-        goto OPENSSL_ERROR;
-    }
-
-    if (!EVP_PKEY_assign_EC_KEY(evp_priv_key, ec_priv)) {
-        goto OPENSSL_ERROR;
-    }
-    evp_size = EVP_PKEY_bits(evp_priv_key);
-    if (keysize != evp_size/8) {
-        ERROR("ERROR: incorrect private key size - 0x%X, expected 0x%x\n",
-                                                             evp_size/8, keysize);
-        goto ERROR;
-    }
-    //We will hash all list up to the signature block
-    bytes_to_hash_num = get_tpm20_policy_list_size(pollist) - (2 * keysize);
+    sig_r->size = keysize;
+    sig_s->size = keysize;
+    pollist_data->size = pollist_data_size;
+    memcpy_s((void *) pollist_data->data, pollist_data->size, (const void *) pollist, 
+                                                             pollist_data_size);
     if (verbose) {
-        LOG("Data to hash:\n");
-        print_hex("       ", (const unsigned char *) pollist, bytes_to_hash_num);
+        LOG("Data to be signed:\n");
+        print_hex("    ", pollist_data->data, pollist_data->size);
     }
-    result = hash_buffer((const unsigned char *) pollist, bytes_to_hash_num,
-                                                            &digest, hashalg);
-    if ( !result ) {
-        ERROR("Error: failed to hash list\n");
-        goto ERROR;
+    result = ec_sign_data(pollist_data, sig_r, sig_s, sigalg, hashalg, privkey);
+    if (!result) {
+        ERROR("Error: failed to sign policy list data.\n");
+        goto EXIT;
     }
-    if ( verbose ) {
-        LOG("List data digest:\n");
-        print_hex("", &digest, digest_size);
-    }
-
-    ecdsasig = ECDSA_do_sign((const unsigned char *)&digest, digest_size, ec_priv);
-    if ( ecdsasig == NULL) {
-        goto OPENSSL_ERROR;
-    }
-
-    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-        ECDSA_SIG_get0(ecdsasig, &r, &s);
-    #else
-        r = ecdsasig->r;
-        s = ecdsasig->s;
-    #endif
-
-    BN_r_size = BN_num_bytes(r);
-    BN_s_size = BN_num_bytes(s);
-    if (BN_r_size != keysize || BN_s_size != keysize) {
-        ERROR("ERROR: Signature size incorrect.\n");
-        goto ERROR;
-    }
-    sig_r = malloc(keysize);
-    if (sig_r == NULL) {
-        ERROR("Error: failed to allocate memory for signature data.\n");
-        goto ERROR;
-    }
-    sig_s = malloc(keysize);
-    if (sig_s == NULL) {
-        ERROR("Error: failed to allocate memory for signature data.\n");
-        goto ERROR;
-    }
-    status = BN_bn2bin(r,sig_r);
-    if (!status)
-        goto OPENSSL_ERROR;
-    status = BN_bn2bin(s,sig_s);
-    if (!status)
-        goto OPENSSL_ERROR;
-
-    buffer_reverse_byte_order((uint8_t *) sig_r, keysize);
-    buffer_reverse_byte_order((uint8_t *) sig_s, keysize);
-
-    status = memcpy_s (
-        (void *) sig->ecc_signature.qx+(2*keysize),
-        2*keysize, sig_r, BN_r_size
-    );
-    if (status != EOK) {
-        ERROR("ERROR: failed to copy signature data to LCP signature.\n");
-        goto ERROR;
-    }
-    status = memcpy_s (
-        (void *) sig->ecc_signature.qx+(3*keysize),
-        keysize, sig_s, BN_r_size
-    );
-
-    if (status != EOK) {
-        ERROR("ERROR: failed to copy signature data to LCP signature.\n");
-        goto ERROR;
-    }
-
+    //Openssl returns data in BE, lcp wants LE so flip endiannes of r and s 
+    buffer_reverse_byte_order((uint8_t *)sig_r->data, sig_r->size);
+    buffer_reverse_byte_order((uint8_t *)sig_s->data, sig_s->size);
+    
+    memcpy_s((void *) sig->ecc_signature.qx + (2 * keysize), keysize, 
+                                        (const void *)sig_r->data, sig_r->size);
+    memcpy_s((void *) sig->ecc_signature.qx + (3 * keysize), keysize, 
+                                        (const void *)sig_s->data, sig_s->size);
     if (verbose) {
-        DISPLAY("LCP_SIGNATURE2: \n");
-        display_tpm20_signature("    ", sig, TPM_ALG_ECDSA, false);
+        display_tpm20_signature("    ", sig, TPM_ALG_SM2, false);
     }
-    //Free resuources:
-    free(sig_r);
-    free(sig_s);
-    OPENSSL_free((void*) ec_priv);
-    OPENSSL_free((void*) evp_priv_key);
-    OPENSSL_free((void*) r);
-    OPENSSL_free((void*) s);
-    OPENSSL_free((void*) ecdsasig);
-    return true;
-
-    OPENSSL_ERROR:
-        ERR_load_crypto_strings();
-        ERROR("OpenSSL error: %s", ERR_error_string(ERR_get_error(), NULL));
-        ERR_free_strings();
-    ERROR:
-        if (fp != NULL)
-            fclose(fp);
-        if (sig_r != NULL)
+    EXIT:
+        if (sig_r != NULL) {
             free(sig_r);
-        if (sig_s != NULL)
+        }
+        if (sig_s != NULL) {
             free(sig_s);
-        if (ec_priv != NULL)
-            OPENSSL_free((void *) ec_priv);
-        if (evp_priv_key != NULL)
-            OPENSSL_free((void *) evp_priv_key);
-        if (ecdsasig != NULL)
-            OPENSSL_free((void *) ecdsasig);
-        if (r != NULL)
-            OPENSSL_free((void *) r);
-        if (s != NULL)
-            OPENSSL_free((void *) s);
-        return false;
+        }
+        if (pollist_data != NULL) {
+            free(pollist_data);
+        }
+        return result;
 }
 
 bool rsa_sign_list2_data(lcp_policy_list_t2 *pollist, const char *privkey_file,
@@ -1288,8 +1229,8 @@ bool rsa_sign_list2_data(lcp_policy_list_t2 *pollist, const char *privkey_file,
         return status;
 }
 
-lcp_policy_list_t2 *policy_list2_ecdsa_sign_init(lcp_policy_list_t2 *pollist,
-                                            uint16_t rev_ctr,
+lcp_policy_list_t2 *policy_list2_ec_sign_init(lcp_policy_list_t2 *pollist,
+                                            uint16_t rev_ctr, uint16_t sig_alg,
                                             const char *pubkey_file,
                                             const char *privkey_file)
 {
@@ -1308,7 +1249,7 @@ lcp_policy_list_t2 *policy_list2_ecdsa_sign_init(lcp_policy_list_t2 *pollist,
     lcp_signature_t2 *sig = NULL;
     bool result;
 
-    LOG("LCP_POLICY_LIST2 sign using ECDSA.\n");
+    LOG("[policy_list2_ec_sign_init]\n");
     if (pollist == NULL) {
         ERROR("Error: lcp policy list is not defined.\n");
         return NULL;
@@ -1321,15 +1262,15 @@ lcp_policy_list_t2 *policy_list2_ecdsa_sign_init(lcp_policy_list_t2 *pollist,
     sig->ecc_signature.revocation_counter = rev_ctr;
     if (verbose) {
         DISPLAY("lcp_signature_t2: \n");
-        display_tpm20_signature("    ", sig, TPM_ALG_ECDSA, false);
+        display_tpm20_signature("    ", sig, sig_alg, false);
     }
-    pollist = add_tpm20_signature(pollist, sig, TPM_ALG_ECDSA);
+    pollist = add_tpm20_signature(pollist, sig, sig_alg);
     if (pollist == NULL) {
         ERROR("Error: failed to add lcp_signature_2_1 to list.\n");
         free(sig);
         return NULL;
     }
-    result = ecdsa_sign_list2_data(pollist, privkey_file);
+    result = ec_sign_list2_data(pollist, privkey_file);    
     if (!result) {
         ERROR("Error: failed to sign list data.\n");
         free(sig);
@@ -1426,20 +1367,16 @@ bool sign_lcp_policy_list_t2(sign_user_input user_input)
         return false;
     }
     //Depending on the sig alg we call one of two functions
-    switch (user_input.sig_alg)
-    {
-    case TPM_ALG_RSASSA:
-        pollist = policy_list2_rsa_sign_init(pollist, 
-                                        user_input.rev_ctr,
-                                        user_input.hash_alg,
-                                        user_input.pubkey_file,
-                                        user_input.privkey_file);
-        break;
-    case TPM_ALG_ECDSA:
-        pollist = policy_list2_ecdsa_sign_init(pollist, user_input.rev_ctr,
-                               user_input.pubkey_file, user_input.privkey_file);
-        break;
-    default:
+    if (user_input.sig_alg == TPM_ALG_RSASSA) {
+        pollist = policy_list2_rsa_sign_init(pollist, user_input.rev_ctr, 
+          user_input.hash_alg, user_input.pubkey_file, user_input.privkey_file);
+    }
+    else if (user_input.sig_alg == TPM_ALG_ECDSA || 
+             user_input.sig_alg == TPM_ALG_SM2) {
+        pollist = policy_list2_ec_sign_init(pollist, user_input.rev_ctr, 
+           user_input.sig_alg, user_input.pubkey_file, user_input.privkey_file);
+    }
+    else {
         //Error
         DISPLAY("Unsupported signature algorithm\n");
         free(pollist);
