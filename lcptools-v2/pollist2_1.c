@@ -86,13 +86,13 @@ lcp_policy_list_t2_1 *get_policy_list_2_1_data(const void *raw_data, size_t base
                                                   uint16_t key_signature_offset)
 {
     /*
-    This function: takes in raw policy list data and alligns it to lcp_policy_list_t2_1
+    This function: takes in raw policy list data and aligns it to lcp_policy_list_t2_1
     structures.
 
-    In: Pointer to contigous policy list data buffer, base size of the list i.e.
+    In: Pointer to contiguous policy list data buffer, base size of the list i.e.
     offset of PolicyElements and size of policy elements, key signature offset.
 
-    Out: Pointer to alligned lcp_policy_list_t2_1 structure
+    Out: Pointer to aligned lcp_policy_list_t2_1 structure
     */
     size_t sig_offset_in_data;
     lcp_policy_list_t2_1 *new_pollist = NULL; //Will return this
@@ -186,7 +186,7 @@ lcp_policy_list_t2_1 *read_policy_list_2_1_file(bool sign_it, const char *list_f
     In: sign_it to indicate whether we want the list to be later signed or not,
     path to list file (string)
 
-    Out: Pointer to alligned lcp_policy_list_t2_1 structure
+    Out: Pointer to aligned lcp_policy_list_t2_1 structure
     */
     LOG("read_policy_list_file: version 0x0300\n");
     size_t file_length; //This is NOT always list size
@@ -499,7 +499,7 @@ Out: Returns a pointer to an empty policy list version 2.1
 
 */
 {
-    LOG("[create_epmty_tpm20_policy_list_2_1]\n");
+    LOG("[create_empty_tpm20_policy_list_2_1]\n");
     lcp_policy_list_t2_1 *pollist = malloc(offsetof(lcp_policy_list_t2_1,
                                                     PolicyElements));
     if (pollist == NULL) {
@@ -700,7 +700,7 @@ bool verify_tpm20_pollist_2_1_ec_sig(const lcp_policy_list_t2_1 *pollist)
         components and passes all of it to ec_verify in lcputils
 
         In: pointer to properly allocated lcp_policy_list_t2_1 structure
-            containig list and signature.
+            containing list and signature.
 
         Out: True on success, false on failure
     */
@@ -768,7 +768,7 @@ bool verify_tpm20_pollist_2_1_ec_sig(const lcp_policy_list_t2_1 *pollist)
         return false;
     }
     if ( keysize != sig->KeyAndSignature.EccKeyAndSignature.Key.KeySize / 8 ) {
-        ERROR("ERROR: keysize mismatch between key and signature. Expedted:"
+        ERROR("ERROR: keysize mismatch between key and signature. Expected:"
                           " 0x%x, found: 0x%x\n", keysize*8, keysize);
         return false;
     }
@@ -920,7 +920,7 @@ Out: true if verifies false if not
     }
     sig_key_size = sig->KeyAndSignature.RsaKeyAndSignature.Signature.KeySize;
     if ( sig_key_size != sig->KeyAndSignature.RsaKeyAndSignature.Key.KeySize ) {
-        ERROR("ERROR: keysize mismatch between key and signature. Expedted:"
+        ERROR("ERROR: keysize mismatch between key and signature. Expected:"
                           " 0x%x, found: 0x%x", key_size_bytes, sig_key_size/8);
         return false;
     }
@@ -1518,7 +1518,7 @@ Out: true/false write success or failure
         return false;
     }
     else {
-        LOG("Write successfull.\n");
+        LOG("Write successful.\n");
         free(buffer);
         return true;
     }
@@ -1967,7 +1967,7 @@ bool ec_sign_list_2_1_data(lcp_policy_list_t2_1 *pollist, const char *privkey_fi
         result = false;
         goto EXIT;
     }
-    //Openssl return data in BE, lcp needs LE so we change endiannes of buffers:
+    //Openssl return data in BE, lcp needs LE so we change endianness of buffers:
     buffer_reverse_byte_order((uint8_t *)sig_r->data, sig_r->size);
     buffer_reverse_byte_order((uint8_t *)sig_s->data, sig_s->size);
 

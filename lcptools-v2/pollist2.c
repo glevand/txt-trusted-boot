@@ -421,7 +421,7 @@ bool verify_tpm20_ec_sig(const lcp_policy_list_t2 *pollist)
         components and passes all of it to ec_verify in lcputils
 
         In: pointer to properly allocated lcp_policy_list_t2 structure
-            containig list and signature.
+            containing list and signature.
 
         Out: True on success, false on failure
     */
@@ -992,7 +992,7 @@ lcp_signature_t2 *read_ecdsa_pubkey(const char *pubkey_file)
         ERROR("ERROR: Cannot copy key data to LCP list\n");
         goto ERROR;
     }
-    //All good, free resuources:
+    //All good, free resources:
     free(qx);
     free(qy);
     OPENSSL_free((void *) pubkey);
@@ -1104,7 +1104,7 @@ bool ec_sign_list2_data(lcp_policy_list_t2 *pollist, const char *privkey)
         ERROR("Error: failed to sign policy list data.\n");
         goto EXIT;
     }
-    //Openssl returns data in BE, lcp wants LE so flip endiannes of r and s 
+    //Openssl returns data in BE, lcp wants LE so flip endianness of r and s 
     buffer_reverse_byte_order((uint8_t *)sig_r->data, sig_r->size);
     buffer_reverse_byte_order((uint8_t *)sig_s->data, sig_s->size);
     

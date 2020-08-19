@@ -115,12 +115,14 @@ static bool read_pcrinfo_file(const char *file)
         this_pcr.valid = false;
 
         line_size_bytes = 80;
-        if (*line == '\n'|| *line == '#' || *line == '\r' || !*line) // if empty or # at the beginning skip
+        if (*line == '\n'|| *line == '#' || *line == '\r' || !*line) { // if empty or # at the beginning skip
             continue;
+        }
         //First valid line should be locality
         token = strtok_s(line, &line_size_bytes, delim, &ptr2token);
-        if (locality)
+        if (locality) {
             this_pcr.locality = locality;
+        }
         if (strcmp(token, "locality") != 0 && !strisdigit_s(token, 1)) {
             ERROR("Error: in pcrInfo file a line must be 'locality:value' or pcrNum:digest\n");
             goto ERROR;

@@ -497,7 +497,7 @@ In: Data - pointer to sized buffer with signed LCP policy list contents:
     LCP_POLICY_LIST and LCP_POLICY_LIST2 - entire list minus the signature field.
 
     pubkey - pointer to sized buffer containing public key in BE form
-    signature - pointer to sizef buffer containing signature in BE form
+    signature - pointer to sized buffer containing signature in BE form
 
     hashAlg - LCP_SIGNATURE2_1->RsaKeyAndSignature.Signature.HashAlg i.e. hash
               alg defined for the list signature. Or TPM_HASHALG_NULL if hashalg
@@ -637,7 +637,7 @@ Out: true/false on verification success or failure
     if (status < 0) { //Error occurred
         goto OPENSSL_ERROR;
     }
-    else { //EVP_PKEY_verify executed sucessfully
+    else { //EVP_PKEY_verify executed successfully
         goto EXIT;
     }
     OPENSSL_ERROR:
@@ -863,7 +863,7 @@ bool ec_sign_data(sized_buffer *data, sized_buffer *r, sized_buffer *s, uint16_t
     This function: Performs the signing operation on the policy list data 
     using OpenSSL SM2 and ECDSA functions.
 
-    In: pointer to data to sign, poitners to buffers for r and s parts (must be BE),
+    In: pointer to data to sign, pointers to buffers for r and s parts (must be BE),
     sigalg to use (must be TPM_ALG_SM2/ECDSA), hashalg (must be 
     TPM_ALG_SHA256/SHA384/SM3_256) path to private key.
 
@@ -1081,7 +1081,7 @@ uint16_t sig_alg, uint16_t hash_alg, EVP_PKEY_CTX *private_key_context)
     const EVP_MD *evp_hash_alg;
 
     if (signature_block == NULL || data_to_sign == NULL || private_key_context == NULL) {
-        ERROR("Error: one or more data buffers is not defiend.\n");
+        ERROR("Error: one or more data buffers is not defined.\n");
         return false;
     }
 

@@ -367,7 +367,7 @@ int create(void)
                     use_only_version = version; //Read version of first list
                 }
                 if ( use_only_version != version ) { //If version differs, that's error
-                    ERROR("ERROR: Mixiung list versions is not supported.\n");
+                    ERROR("ERROR: Mixing list versions is not supported.\n");
                     free(pol);
                     free(poldata);
                     return 1;

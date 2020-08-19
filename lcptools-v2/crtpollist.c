@@ -317,7 +317,7 @@ static int sign(void)
         LOG("sign: LCP_POLICY_LIST,sig_alg=LCP_POLSALG_RSA_PKCS_15\n");
         result = sign_lcp_policy_list_t(user_input);
         if (result) {
-            DISPLAY("List signed succesfully and written to %s\n", user_input.list_file);
+            DISPLAY("List signed successfully and written to %s\n", user_input.list_file);
             return 0;
         }
         else {
@@ -329,7 +329,7 @@ static int sign(void)
         LOG("sign: LCP_POLICY_LIST2,sig_alg=0x%x\n", user_input.sig_alg);
         result = sign_lcp_policy_list_t2(user_input);
         if (result) {
-            DISPLAY("List signed succesfully and written to %s\n", user_input.list_file);
+            DISPLAY("List signed successfully and written to %s\n", user_input.list_file);
             return 0;
         }
         else {
@@ -341,7 +341,7 @@ static int sign(void)
         LOG("sign: LCP_POLICY_LIST2_1,sig_alg=0x%x\n", user_input.sig_alg);
         result = sign_lcp_policy_list_t2_1(user_input);
         if (result) {
-            DISPLAY("List signed succesfully and written to %s\n", user_input.list_file);
+            DISPLAY("List signed successfully and written to %s\n", user_input.list_file);
             return 0;
         }
         else {

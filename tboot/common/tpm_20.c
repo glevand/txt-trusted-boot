@@ -171,7 +171,7 @@ static u16 reverse_copy_sized_buf_in(TPM2B *dest, TPM2B *src)
 
 /*
  * Inputs: dest->size should contain the buffer size of dest->buffer[]
- * Ouputs: dest->size should contain the final copied data size
+ * Outputs: dest->size should contain the final copied data size
  *
  * Return: 0, failed; 2+, succeed.
  */

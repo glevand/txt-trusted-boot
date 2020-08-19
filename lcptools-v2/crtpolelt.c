@@ -227,7 +227,7 @@ int main (int argc, char *argv[])
             return 1;
         }
         if ( *out_file == '\0' ) {
-            ERROR("Error: no ouput file specified\n");
+            ERROR("Error: no output file specified\n");
             return 1;
         }
 

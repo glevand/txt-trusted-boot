@@ -149,7 +149,7 @@ void display_legacy_policy(const char *prefix, const lcp_policy_t *pol)
 
 void display_policy(const char *prefix, const lcp_policy_t2 *pol, bool brief)
 {
-    (void)brief;        /* quiet compiler warning portbly */
+    (void)brief;        /* quiet compiler warning portably */
     if ( pol == NULL )
         return;
 
