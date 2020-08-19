@@ -408,6 +408,7 @@ static inline void _reverse_copy(uint8_t *out, uint8_t *in, uint32_t count)
 
 /* alg id list supported by Tboot */
 extern u16 tboot_alg_list[];
+extern const uint8_t tboot_alg_list_count;
 
 typedef tb_hash_t tpm_digest_t;
 typedef tpm_digest_t tpm_pcr_value_t;

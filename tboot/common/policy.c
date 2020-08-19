@@ -529,7 +529,7 @@ static bool hash_module(hash_list_t *hl,
                 tb_strlen(cmdline), hl) )
             return false;
 
-        uint8_t buf[128];
+        uint8_t buf[2*sizeof(tb_hash_t)];
 
         if ( !tpm_fp->hash(tpm, 2, base, size, &img_hl) )
             return false;

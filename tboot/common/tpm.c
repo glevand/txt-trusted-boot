@@ -54,7 +54,8 @@ __data struct tpm_if g_tpm = {
     .timeout.timeout_d = TIMEOUT_D,
 };
 
-u16 tboot_alg_list[] = {TB_HALG_SHA1, TB_HALG_SHA256};
+u16 tboot_alg_list[] = {TB_HALG_SHA1, TB_HALG_SHA256, TB_HALG_SHA384, TB_HALG_SHA512};
+const uint8_t tboot_alg_list_count = ARRAY_SIZE(tboot_alg_list);
 
 /* Global variables for TPM status register */
 static tpm20_reg_sts_t       g_reg_sts, *g_reg_sts_20 = &g_reg_sts;

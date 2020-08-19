@@ -1907,7 +1907,8 @@ void print_loader_ctx(loader_ctx *lctx)
         return;
     } else {
         struct mb2_tag *start = (struct mb2_tag *)(lctx->addr + 8);
-        printk(TBOOT_INFO"MB2 dump, size %d\n", *(uint32_t *)lctx->addr);
+        printk(TBOOT_INFO"MB2 dump: addr %p, size %d\n", lctx->addr,
+               *(uint32_t *)lctx->addr);
         while (start != NULL){
             printk(TBOOT_INFO"MB2 tag found of type %d size %d ", 
                    start->type, start->size);
@@ -1922,8 +1923,10 @@ void print_loader_ctx(loader_ctx *lctx)
                 break;
             case MB2_TAG_TYPE_MODULE:
                 {
-                    struct mb2_tag_module *ts = 
+                    struct mb2_tag_module *ts =
                         (struct mb2_tag_module *) start;
+                    printk(TBOOT_INFO"mod_start: 0x%x, mod_end: 0x%x",
+                           ts->mod_start, ts->mod_end);
                     printk_long(ts->cmdline);
                 }
                 break;

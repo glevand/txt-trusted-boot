@@ -2615,7 +2615,7 @@ static bool tpm20_cap_pcrs(struct tpm_if *ti, u32 locality, int pcr)
 
 static bool alg_is_supported(u16 alg)
 {
-    for (int i=0; i<2; i++) {
+    for (int i = 0; i < tboot_alg_list_count; i++) {
         if (alg == tboot_alg_list[i])
             return true;
     }
