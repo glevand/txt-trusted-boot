@@ -119,6 +119,11 @@ extern char _end[];              /* end of tboot */
 #define TBOOT_ALL        "<5>"
 #endif /* NO_TBOOT_LOGLVL */
 
+/* Framebuffer */
+#define FB_MAX_HRES 1920
+#define FB_MAX_VRES 1080
+#define FB_BPP 32
+
 #endif /* __CONFIG_H__ */
 
 

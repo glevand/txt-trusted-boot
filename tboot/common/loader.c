@@ -2035,15 +2035,15 @@ is_loader_launch_efi(loader_ctx *lctx)
     return (get_loader_efi_ptr(lctx, &addr, &long_addr));
 }
 
-void load_framebuffer_info(loader_ctx *lctx, void *vscr)
+bool load_framebuffer_info(loader_ctx *lctx, void *vscr, bool efifb)
 {
     screen_info_t *scr = (screen_info_t *) vscr;
     struct mb2_tag *start;
 
     if (scr == NULL)
-        return;
+        return false;
     if (LOADER_CTX_BAD(lctx))
-        return;
+        return false;
     start = (struct mb2_tag *)(lctx->addr + 8);
     start = find_mb2_tag_type(start, MB2_TAG_TYPE_FRAMEBUFFER);
     if (start != NULL){
@@ -2071,10 +2071,27 @@ void load_framebuffer_info(loader_ctx *lctx, void *vscr)
         /* round up to next 64k */
         scr->lfb_size = (scr->lfb_size + 65535) & 65535;
         
-        scr->orig_video_isVGA = 0x70; /* EFI FB */
+        if (efifb) {
+            scr->orig_video_isVGA = 0x70; /* EFI FB */
+        } else {
+            scr->orig_video_isVGA = 0x23; /* VESA VGA */
+        }
         scr->orig_y = 24;
+        return true;
+    } else {
+        return false;
     }
 
+}
+
+struct mb2_fb* get_framebuffer_info(loader_ctx *lctx)
+{
+    if (LOADER_CTX_BAD(lctx)) {
+        return NULL;
+    }
+
+    struct mb2_tag *start = (struct mb2_tag *)(lctx->addr + 8);
+    return (struct mb2_fb*)find_mb2_tag_type(start, MB2_TAG_TYPE_FRAMEBUFFER);
 }
 
 void determine_loader_type(void *addr, uint32_t magic)

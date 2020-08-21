@@ -37,16 +37,35 @@
 #include <string.h>
 #include <misc.h>
 #include <io.h>
+#include <printk.h>
+#include <uuid.h>
+#include <multiboot.h>
+#include <loader.h>
 #include <vga.h>
 
-static uint16_t * const screen = (uint16_t * const)VGA_BASE;
+#define SSFN_CONSOLEBITMAP_TRUECOLOR 
+#include <vga/ssfn.h>
+#include <vga/font.h>
+
+static uint16_t * const legacy_screen = (uint16_t * const)VGA_BASE;
 static __data uint8_t cursor_x, cursor_y;
 static __data unsigned int num_lines;
 uint8_t g_vga_delay = 0;       /* default to no delay */
 
-static inline void reset_screen(void)
+static struct mb2_fb* fb;
+static uint32_t __data fb_buff1[FB_SIZE];
+static uint32_t __data fb_buff2[FB_SIZE];
+
+typedef enum {
+    VGA_NONE = 0,
+    VGA_LEGACY,
+    VGA_FB,
+} vga_type_t;
+vga_type_t vga_type;
+
+static inline void legacy_reset_screen(void)
 {
-    tb_memset(screen, 0, SCREEN_BUFFER);
+    tb_memset(legacy_screen, 0, SCREEN_BUFFER);
     cursor_x = 0;
     cursor_y = 0;
     num_lines = 0;
@@ -57,7 +76,7 @@ static inline void reset_screen(void)
     outb(CTL_DATA_REG, 0x00);
 }
 
-static void scroll_screen(void)
+static void legacy_scroll_screen(void)
 {
     for ( int y = 1; y < MAX_LINES; y++ ) {
         for ( int x = 0; x < MAX_COLS; x++ )
@@ -68,12 +87,7 @@ static void scroll_screen(void)
         writew(VGA_ADDR(x, MAX_LINES-1), 0x720);
 }
 
-static void __putc(uint8_t x, uint8_t y, int c)
-{
-    screen[(y * MAX_COLS) + x] = (COLOR << 8) | c;
-}
-
-static void vga_putc(int c)
+static void legacy_putc(int c)
 {
     bool new_row = false;
 
@@ -90,7 +104,7 @@ static void vga_putc(int c)
             cursor_x += 4;
             break;
         default:
-            __putc(cursor_x, cursor_y, c);
+            legacy_screen[(cursor_y * MAX_COLS) + cursor_x] = (COLOR << 8) | c;
             cursor_x++;
             break;
     }
@@ -104,7 +118,7 @@ static void vga_putc(int c)
     if ( new_row ) {
         num_lines++;
         if ( cursor_y >= MAX_LINES ) {
-            scroll_screen();
+            legacy_scroll_screen();
             cursor_y--;
         }
 
@@ -114,15 +128,119 @@ static void vga_putc(int c)
     }
 }
 
+static void fb_putc(int c)
+{
+    bool new_row = false;
+
+    switch ( c ) {
+        case '\n':
+            ssfn_dst.y += ssfn_src->height;
+            ssfn_dst.x = 0;
+            new_row = true;
+            break;
+        case '\r':
+            ssfn_dst.x = 0;
+            break;
+        case '\t':
+            ssfn_dst.x += 4 * ssfn_src->width;
+            break;
+        default:
+            ssfn_putc(c);
+            break;
+    }
+
+    if ( new_row ) {
+        num_lines++;
+        const uint32_t h = fb->common.fb_height;
+        const uint32_t w = fb->common.fb_width;
+        const uint32_t fh = ssfn_src->height;
+        if ((uint32_t)ssfn_dst.y >= h - fh) {
+            tb_memcpy(fb_buff1, &fb_buff1[w*fh], (w*h-w*fh)*sizeof(uint32_t));
+            tb_memset(&fb_buff1[(w*h-w*fh)], 0, w*fh*sizeof(uint32_t));
+            ssfn_dst.y -= fh;
+        }
+        for (uint32_t i = 0; i < h*w; ++i) {
+            if (fb_buff1[i] != fb_buff2[i]) {
+                ((volatile uint32_t*)((uint32_t)fb->common.fb_addr))[i] = fb_buff1[i];
+                fb_buff2[i] = fb_buff1[i];
+            }
+        }
+
+        /* (optionally) pause after every screenful */
+        uint32_t lines_in_screen = h / fh;
+        if ( (num_lines % (lines_in_screen - 1)) == 0 && g_vga_delay > 0 ) {
+            delay(g_vga_delay * 1000);
+        }
+    }
+}
+
+static void fb_init(void)
+{
+    printk(TBOOT_INFO"Framebuffer info:\n");
+    printk(TBOOT_INFO"    address: 0x%llx\n", fb->common.fb_addr);
+    printk(TBOOT_INFO"    pitch: %d\n", fb->common.fb_pitch);
+    printk(TBOOT_INFO"    width: %d\n", fb->common.fb_width);
+    printk(TBOOT_INFO"    height: %d\n", fb->common.fb_height);
+    printk(TBOOT_INFO"    bpp: %d\n", fb->common.fb_bpp);
+    printk(TBOOT_INFO"    type: %d\n", fb->common.fb_type);
+
+    if (fb->common.fb_addr > 0xffffffffULL ||
+        plus_overflow_u32((uint32_t)fb->common.fb_addr,
+                          fb->common.fb_pitch * fb->common.fb_height)) {
+        printk(TBOOT_ERR"Framebuffer at >4GB is not supported\n");
+        return;
+    }
+
+    if (fb->common.fb_width > FB_MAX_HRES || fb->common.fb_height > FB_MAX_VRES ||
+            fb->common.fb_bpp != FB_BPP) {
+        printk(TBOOT_ERR"Not supported framebuffer size/bpp\n");
+        return;
+    }
+
+    for (uint32_t i = 0; i < fb->common.fb_width * fb->common.fb_height; ++i) {
+        ((volatile uint32_t*)(uint32_t)fb->common.fb_addr)[i] = 0;
+        fb_buff1[i] = 0;
+        fb_buff2[i] = 0;
+    }
+
+    /* set up context by global variables */
+    ssfn_src = (ssfn_font_t*)u_vga16_sfn;
+    ssfn_dst.ptr = (uint8_t*)fb_buff1;
+    ssfn_dst.p = fb->common.fb_pitch;
+    ssfn_dst.w = fb->common.fb_width;
+    ssfn_dst.h = fb->common.fb_height;
+    ssfn_dst.fg = FB_COLOR;
+    ssfn_dst.bg = 0;
+    ssfn_dst.x = 0;
+    ssfn_dst.y = 0;
+
+    vga_type = VGA_FB;
+}
+
+static void legacy_init(void)
+{
+    legacy_reset_screen();
+    vga_type = VGA_LEGACY;
+}
+
 void vga_init(void)
 {
-    reset_screen();
+    fb = get_framebuffer_info(g_ldr_ctx); 
+    if (fb != NULL) {
+        fb_init();
+    } else {
+        legacy_init();
+    }
 }
 
 void vga_puts(const char *s, unsigned int cnt)
 {
     while ( *s && cnt-- ) {
-        vga_putc(*s);
+        if (vga_type == VGA_LEGACY) {
+            legacy_putc(*s);
+        } else if (vga_type == VGA_FB) {
+            fb_putc(*s);
+        }
         s++;
     }
 }

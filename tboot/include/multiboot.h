@@ -38,6 +38,9 @@
 
 #include <config.h>
 
+/* Multiboot2 tag alignment. */
+#define MULTIBOOT2_TAG_ALIGN        8
+
 /* Multiboot Header Definitions of OS image*/
 #define MULTIBOOT_HEADER_MAGIC			0x1BADB002
 #define MULTIBOOT_HEADER_SEARCH_LIMIT 8192
@@ -75,6 +78,7 @@
 #define MB2_HDR_TAG_FRAMEBUFFER		  5
 #define MB2_HDR_TAG_MOD_ALIGN		  6
 
+#define MB2_HDR_TAG_REQUIRED      0
 #define MB2_HDR_TAG_OPTIONAL		  1
 
 #define MB2_CONS_FLAGS_CONS_REQ		  1

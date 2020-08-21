@@ -65,6 +65,26 @@
 /* errorcode for post-launch memory layout verfication failure */
 #define LAYOUT_ERR             0xc0008001
 
+/* Helpers macros from XEN source code */
+        .macro mb2ht_args arg:req, args:vararg
+        .long \arg
+        .ifnb \args
+        mb2ht_args \args
+        .endif
+        .endm
+
+        .macro mb2ht_init type:req, req:req, args:vararg
+        .balign MULTIBOOT2_TAG_ALIGN, 0xc2 /* Avoid padding with long nops. */
+.Lmb2ht_init_start\@:
+        .short \type
+        .short \req
+        .long .Lmb2ht_init_end\@ - .Lmb2ht_init_start\@
+        .ifnb \args
+        mb2ht_args \args
+        .endif
+.Lmb2ht_init_end\@:
+        .endm
+
 .section ".tboot_multiboot_header","w"
         .align 4
 /* multiboot header */
@@ -86,13 +106,21 @@ multiboot2_header:
         .long multiboot2_header_end - multiboot2_header
         /* checksum */
         .long -(MB2_HEADER_MAGIC + MB2_ARCH_X86 + (multiboot2_header_end - multiboot2_header))
-multiboot2_header_end:	
-        /* tag requests here--RLM, fix me!! Well, maybe! */
-        .short MB2_HDR_TAG_END
-        .short 0
-        .long 8
 
-	.text
+        /* Framebuffer tag */
+        mb2ht_init MB2_HDR_TAG_FRAMEBUFFER, MB2_HDR_TAG_OPTIONAL, \
+                   FB_MAX_HRES,   /* width */ \
+                   FB_MAX_VRES,   /* height */ \
+                   FB_BPP         /* depth */
+
+        /* Multiboot2 header end tag. */
+        mb2ht_init MB2_HDR_TAG_END, MB2_HDR_TAG_REQUIRED
+
+multiboot2_header_end:	
+        .size multiboot2_header, . - multiboot2_header
+        .type multiboot2_header, @object
+
+.text
 
 ENTRY(start)
 ENTRY(_start)

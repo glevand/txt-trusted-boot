@@ -350,7 +350,16 @@ void begin_launch(void *addr, uint32_t magic)
     tboot_parse_cmdline();
 
     /* initialize all logging targets */
-    printk_init();
+    if ((is_launched() && get_framebuffer_info(g_ldr_ctx) != NULL) || s3_flag) {
+        /* 
+         * We are using framebuffer method for printing VGA logs. It does not
+         * when PMRs are programmed, so in post-launch we have to disable VGA
+         * logging.
+         */
+        printk_init(true);
+    } else {
+        printk_init(false);
+    }
 
     printk(TBOOT_INFO"*********************** TBOOT ***********************\n");
     printk(TBOOT_INFO"   %s\n", TBOOT_CHANGESET);

@@ -863,6 +863,15 @@ tb_error_t txt_launch_environment(loader_ctx *lctx)
     os_mle_data = get_os_mle_data_start(txt_heap);
     save_mtrrs(&(os_mle_data->saved_mtrr_state));
 
+    /* 
+     * Disable VGA logging when using framebuffer. Writing to it will be
+     * extreme slow when memory is set to UC.
+     */
+    if (get_framebuffer_info(g_ldr_ctx) != NULL) {
+        printk(TBOOT_INFO"Disabling VGA logging before GETSEC[SENTER]\n");
+        printk_disable_vga();
+    }
+
     /* set MTRRs properly for AC module (SINIT) */
     if ( !set_mtrrs_for_acmod(g_sinit) )
         return TB_ERR_FATAL;

@@ -36,6 +36,8 @@
 #ifndef __VGA_H__
 #define __VGA_H__
 
+#include <config.h>
+
 #define VGA_BASE                    0xb8000
 
 /* 80*25 text mode*/
@@ -70,6 +72,9 @@
 
 #define COLOR                       ((COLOR_BLACK << 4) | COLOR_LTGRAY)
 
+/* Framebuffer */
+#define FB_SIZE (FB_MAX_HRES * FB_MAX_VRES)
+#define FB_COLOR 0xffa8a8a8
 
 void vga_init(void);
 void vga_puts(const char *s, unsigned int cnt);

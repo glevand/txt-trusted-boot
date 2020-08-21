@@ -165,7 +165,7 @@ static void memlog_write( const char *str, unsigned int count)
     }
 }
 
-void printk_init(void)
+void printk_init(bool force_vga_off)
 {
     mtx_init(&print_lock);
 
@@ -183,10 +183,15 @@ void printk_init(void)
         memlog_init();
     if ( g_log_targets & TBOOT_LOG_TARGET_SERIAL )
         serial_init();
-    if ( g_log_targets & TBOOT_LOG_TARGET_VGA ) {
+    if ( !force_vga_off && (g_log_targets & TBOOT_LOG_TARGET_VGA) ) {
         vga_init();
         get_tboot_vga_delay(); /* parse vga delay time */
     }
+}
+
+void printk_disable_vga(void)
+{
+    g_log_targets &= ~TBOOT_LOG_TARGET_VGA;
 }
 
 #define WRITE_LOGS(s, n) \

@@ -60,7 +60,8 @@ extern serial_port_t g_com_port;
 
 #define vga_write(s,n)        vga_puts(s, n)
 
-extern void printk_init(void);
+extern void printk_init(bool force_vga_off);
+extern void printk_disable_vga(void);
 extern void printk(const char *fmt, ...)
                          __attribute__ ((format (printf, 1, 2)));
 

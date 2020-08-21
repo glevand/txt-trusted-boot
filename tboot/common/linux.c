@@ -352,8 +352,6 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
     /* need to handle a few EFI things here if such is our parentage */
     if (is_loader_launch_efi(g_ldr_ctx)){
         struct efi_info *efi = (struct efi_info *)(boot_params->efi_info);
-        struct screen_info_t *scr = 
-            (struct screen_info_t *)(boot_params->screen_info);
         uint32_t address = 0;
         uint64_t long_address = 0UL;
 
@@ -408,8 +406,18 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
                   efi->efi_memdescr_size, efi->efi_memdescr_ver);
          }
 
-        /* if we're here, GRUB2 probably threw a framebuffer tag at us */
-        load_framebuffer_info(g_ldr_ctx, (void *)scr);
+    }
+
+    screen_info_t *scr = (screen_info_t *)(boot_params->screen_info);
+    if (!load_framebuffer_info(g_ldr_ctx, (void *)scr,
+                               is_loader_launch_efi(g_ldr_ctx))) {
+        /* Fallback to 80x25 mode */
+        scr->orig_video_mode = 3;       /* BIOS 80*25 text mode */
+        scr->orig_video_lines = 25;
+        scr->orig_video_cols = 80;
+        scr->orig_video_points = 16;    /* set font height to 16 pixels */
+        scr->orig_video_isVGA = 1;      /* use VGA text screen setups */
+        scr->orig_y = 24;               /* start display text @ screen end*/
     }
     
     /* detect e820 table */
@@ -435,15 +443,15 @@ bool expand_linux_image(const void *linux_image, size_t linux_size,
         boot_params->e820_entries = i;
     }
 
-    if (0 == is_loader_launch_efi(g_ldr_ctx)){
-        screen_info_t *screen = (screen_info_t *)&boot_params->screen_info;
-        screen->orig_video_mode = 3;       /* BIOS 80*25 text mode */
-        screen->orig_video_lines = 25;
-        screen->orig_video_cols = 80;
-        screen->orig_video_points = 16;    /* set font height to 16 pixels */
-        screen->orig_video_isVGA = 1;      /* use VGA text screen setups */
-        screen->orig_y = 24;               /* start display text @ screen end*/
-    }
+    // if (0 == is_loader_launch_efi(g_ldr_ctx)){
+    //     screen_info_t *screen = (screen_info_t *)&boot_params->screen_info;
+    //     screen->orig_video_mode = 3;       /* BIOS 80*25 text mode */
+    //     screen->orig_video_lines = 25;
+    //     screen->orig_video_cols = 80;
+    //     screen->orig_video_points = 16;    /* set font height to 16 pixels */
+    //     screen->orig_video_isVGA = 1;      /* use VGA text screen setups */
+    //     screen->orig_y = 24;               /* start display text @ screen end*/
+    // }
 
     /* set address of tboot shared page */
     if ( is_measured_launch )

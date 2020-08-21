@@ -101,8 +101,9 @@ extern uint8_t *get_loader_rsdp(loader_ctx *lctx, uint32_t *length);
 extern bool is_loader_launch_efi(loader_ctx *lctx);
 extern bool get_loader_efi_ptr(loader_ctx *lctx, uint32_t *address, 
                                uint64_t *long_address);
-extern void load_framebuffer_info(loader_ctx *lctx, void *vscr);
+extern bool load_framebuffer_info(loader_ctx *lctx, void *vscr, bool efifb);
 extern char *get_first_module_cmd(loader_ctx *lctx);
+extern struct mb2_fb* get_framebuffer_info(loader_ctx *lctx);
 
 #endif /* __LOADER_H__ */
 
