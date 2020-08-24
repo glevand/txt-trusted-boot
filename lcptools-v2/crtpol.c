@@ -317,10 +317,10 @@ int create(void)
     pol->max_sinit_min_ver = max_sinit_min_version;
     pol->policy_control = policy_ctrl;
 
-    if(aux_hash_alg == TPM_ALG_MASK_NULL){
+    if (aux_hash_alg == TPM_ALG_MASK_NULL && pol->version == LCP_VER_3_0) {
         pol->aux_hash_alg_mask = convert_hash_alg_to_mask(pol->hash_alg);
     }
-    else{
+    else {
         pol->aux_hash_alg_mask = aux_hash_alg;
     }
 
