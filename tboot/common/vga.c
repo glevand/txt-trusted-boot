@@ -52,7 +52,7 @@ static __data uint8_t cursor_x, cursor_y;
 static __data unsigned int num_lines;
 uint8_t g_vga_delay = 0;       /* default to no delay */
 
-static struct mb2_fb* fb;
+static struct mb2_fb g_fb;
 static uint32_t __data fb_buff1[FB_SIZE];
 static uint32_t __data fb_buff2[FB_SIZE];
 
@@ -151,8 +151,8 @@ static void fb_putc(int c)
 
     if ( new_row ) {
         num_lines++;
-        const uint32_t h = fb->common.fb_height;
-        const uint32_t w = fb->common.fb_width;
+        const uint32_t h = g_fb.common.fb_height;
+        const uint32_t w = g_fb.common.fb_width;
         const uint32_t fh = ssfn_src->height;
         if ((uint32_t)ssfn_dst.y >= h - fh) {
             tb_memcpy(fb_buff1, &fb_buff1[w*fh], (w*h-w*fh)*sizeof(uint32_t));
@@ -161,7 +161,7 @@ static void fb_putc(int c)
         }
         for (uint32_t i = 0; i < h*w; ++i) {
             if (fb_buff1[i] != fb_buff2[i]) {
-                ((volatile uint32_t*)((uint32_t)fb->common.fb_addr))[i] = fb_buff1[i];
+                ((volatile uint32_t*)((uint32_t)g_fb.common.fb_addr))[i] = fb_buff1[i];
                 fb_buff2[i] = fb_buff1[i];
             }
         }
@@ -177,28 +177,28 @@ static void fb_putc(int c)
 static void fb_init(void)
 {
     printk(TBOOT_INFO"Framebuffer info:\n");
-    printk(TBOOT_INFO"    address: 0x%llx\n", fb->common.fb_addr);
-    printk(TBOOT_INFO"    pitch: %d\n", fb->common.fb_pitch);
-    printk(TBOOT_INFO"    width: %d\n", fb->common.fb_width);
-    printk(TBOOT_INFO"    height: %d\n", fb->common.fb_height);
-    printk(TBOOT_INFO"    bpp: %d\n", fb->common.fb_bpp);
-    printk(TBOOT_INFO"    type: %d\n", fb->common.fb_type);
+    printk(TBOOT_INFO"    address: 0x%llx\n", g_fb.common.fb_addr);
+    printk(TBOOT_INFO"    pitch: %d\n", g_fb.common.fb_pitch);
+    printk(TBOOT_INFO"    width: %d\n", g_fb.common.fb_width);
+    printk(TBOOT_INFO"    height: %d\n", g_fb.common.fb_height);
+    printk(TBOOT_INFO"    bpp: %d\n", g_fb.common.fb_bpp);
+    printk(TBOOT_INFO"    type: %d\n", g_fb.common.fb_type);
 
-    if (fb->common.fb_addr > 0xffffffffULL ||
-        plus_overflow_u32((uint32_t)fb->common.fb_addr,
-                          fb->common.fb_pitch * fb->common.fb_height)) {
+    if (g_fb.common.fb_addr > 0xffffffffULL ||
+        plus_overflow_u32((uint32_t)g_fb.common.fb_addr,
+                          g_fb.common.fb_pitch * g_fb.common.fb_height)) {
         printk(TBOOT_ERR"Framebuffer at >4GB is not supported\n");
         return;
     }
 
-    if (fb->common.fb_width > FB_MAX_HRES || fb->common.fb_height > FB_MAX_VRES ||
-            fb->common.fb_bpp != FB_BPP) {
+    if (g_fb.common.fb_width > FB_MAX_HRES || g_fb.common.fb_height > FB_MAX_VRES ||
+            g_fb.common.fb_bpp != FB_BPP) {
         printk(TBOOT_ERR"Not supported framebuffer size/bpp\n");
         return;
     }
 
-    for (uint32_t i = 0; i < fb->common.fb_width * fb->common.fb_height; ++i) {
-        ((volatile uint32_t*)(uint32_t)fb->common.fb_addr)[i] = 0;
+    for (uint32_t i = 0; i < g_fb.common.fb_width * g_fb.common.fb_height; ++i) {
+        ((volatile uint32_t*)(uint32_t)g_fb.common.fb_addr)[i] = 0;
         fb_buff1[i] = 0;
         fb_buff2[i] = 0;
     }
@@ -206,9 +206,9 @@ static void fb_init(void)
     /* set up context by global variables */
     ssfn_src = (ssfn_font_t*)u_vga16_sfn;
     ssfn_dst.ptr = (uint8_t*)fb_buff1;
-    ssfn_dst.p = fb->common.fb_pitch;
-    ssfn_dst.w = fb->common.fb_width;
-    ssfn_dst.h = fb->common.fb_height;
+    ssfn_dst.p = g_fb.common.fb_pitch;
+    ssfn_dst.w = g_fb.common.fb_width;
+    ssfn_dst.h = g_fb.common.fb_height;
     ssfn_dst.fg = FB_COLOR;
     ssfn_dst.bg = 0;
     ssfn_dst.x = 0;
@@ -225,8 +225,9 @@ static void legacy_init(void)
 
 void vga_init(void)
 {
-    fb = get_framebuffer_info(g_ldr_ctx); 
+    struct mb2_fb* fb = get_framebuffer_info(g_ldr_ctx); 
     if (fb != NULL) {
+        g_fb = *fb;
         fb_init();
     } else {
         legacy_init();
