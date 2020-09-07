@@ -524,6 +524,7 @@ void get_tboot_extpol(void)
         tpm->extpol = TB_EXTPOL_FIXED;
         tpm->cur_alg = TB_HALG_SHA256;
     } else if ( tb_strcmp(extpol, "sha1") == 0 ) {
+        printk(TBOOT_WARN"Warning: SHA1 is selected in extpol, this is an unsafe option\n");
         tpm->extpol = TB_EXTPOL_FIXED;
         tpm->cur_alg = TB_HALG_SHA1;
     } else if ( tb_strcmp(extpol, "sm3") == 0 ) {

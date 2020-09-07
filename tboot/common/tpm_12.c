@@ -1716,6 +1716,8 @@ static bool tpm12_init(struct tpm_if *ti)
     if ( ti == NULL )
         return false;
 
+    printk(TBOOT_WARN"Warning: TPM1.2 detected, SHA1 is selected as hashing algorithm.\n");
+
     if (!txt_is_launched())
         ti->cur_loc = 0;
     else
