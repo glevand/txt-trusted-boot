@@ -65,12 +65,17 @@ bool efi_memmap_copy(loader_ctx *lctx)
         return false;
     }
 
-    efi_mmap->size = mmap_size;
-    efi_mmap->descr_size = descr_size;
-    tb_memcpy(efi_mmap->descr, (void*)descr_addr, mmap_size);
-    efi_mmap_available = true;
+    if (mmap_size < TBOOT_EFI_MEMMAP_COPY_SIZE - offsetof(efi_memmap_t, descr)) {
+        efi_mmap->size = mmap_size;
+        efi_mmap->descr_size = descr_size;
+        tb_memcpy(efi_mmap->descr, (void*)descr_addr, mmap_size);
+        efi_mmap_available = true;
+        return true;
+    } else {
+        printk(TBOOT_WARN"Too many entries in EFI memory map\n");
+        return false;
+    }
 
-    return true;
 }
 
 /**
@@ -304,7 +309,7 @@ bool efi_memmap_get_highest_sized_ram(uint64_t size, uint64_t limit,
     }
 
     printk("get_highest_sized_ram: size %llx -> base %llx, size %llx\n",
-           size, *ram_base, *ram_size);
+           size, last_fit_base, last_fit_size);
 
     if (last_fit_size == 0) {
         return false;

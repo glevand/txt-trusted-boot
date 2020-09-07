@@ -289,8 +289,15 @@ bool verify_loader_context(loader_ctx *lctx)
     if (count < 1){
         printk(TBOOT_ERR"Error: no MB%d modules\n", lctx->type);
         return false;
-    } else
+    } else {
+        for (uint32_t i = 0; i < count; ++i) {
+            module_t *m = get_module(lctx, i);
+            if (m->mod_end < m->mod_start) {
+                return false;
+            }
+        }
         return true;
+    }
 }
 
 static bool remove_mb2_tag(loader_ctx *lctx, struct mb2_tag *cur)

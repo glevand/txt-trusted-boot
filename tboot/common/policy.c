@@ -819,6 +819,11 @@ static void verify_g_policy(void)
 
 void verify_all_modules(loader_ctx *lctx)
 {
+    if (!verify_loader_context(lctx)) {
+        printk(TBOOT_ERR"Error: Invalid loader context\n");
+        apply_policy(TB_ERR_FATAL);
+    }
+
     /* assumes mbi is valid */
     verify_g_policy();
 
