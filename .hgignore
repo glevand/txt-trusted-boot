@@ -55,3 +55,4 @@
 ^utils/txt-stat$
 ^utils/txt-parse_err$
 ^cov-int/.*$
+^doxygen/.*$
