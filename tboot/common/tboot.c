@@ -648,13 +648,19 @@ void shutdown(void)
     if ( is_launched() ) {
 
         /* cap PCRs to ensure no follow-on code can access sealed data */
-        tpm_fp->cap_pcrs(tpm, tpm->cur_loc, -1);
+        if (!tpm_fp->cap_pcrs(tpm, tpm->cur_loc, -1)) {
+            printk(TBOOT_ERR"failed to cap PCRs\n");
+            apply_policy(TB_ERR_FATAL);
+        }
 
         /* have TPM save static PCRs (in case VMM/kernel didn't) */
         /* per TCG spec, TPM can invalidate saved state if any other TPM
            operation is performed afterwards--so do this last */
-        if ( _tboot_shared.shutdown_type == TB_SHUTDOWN_S3 )
-            tpm_fp->save_state(tpm, tpm->cur_loc);
+        if ( _tboot_shared.shutdown_type == TB_SHUTDOWN_S3 ) {
+            if (tpm_fp->save_state(tpm, tpm->cur_loc) != 0) {
+                printk(TBOOT_ERR"failed to save TPM state\n");
+            }
+        }
 
         /* scrub any secrets by clearing their memory, then flush cache */
         /* we don't have any secrets to scrub, however */
