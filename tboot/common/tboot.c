@@ -154,6 +154,21 @@ static void restore_saved_s3_wakeup_page(void)
            s3_wakeup_end - s3_wakeup_16);
 }
 
+static inline void print_tboot_shared(const tboot_shared_t *tboot_shared)
+{
+    printk(TBOOT_DETA"tboot_shared data:\n");
+    printk(TBOOT_DETA"\t version: %d\n", tboot_shared->version);
+    printk(TBOOT_DETA"\t log_addr: 0x%08x\n", tboot_shared->log_addr);
+    printk(TBOOT_DETA"\t shutdown_entry: 0x%08x\n", tboot_shared->shutdown_entry);
+    printk(TBOOT_DETA"\t shutdown_type: %d\n", tboot_shared->shutdown_type);
+    printk(TBOOT_DETA"\t tboot_base: 0x%08x\n", tboot_shared->tboot_base);
+    printk(TBOOT_DETA"\t tboot_size: 0x%x\n", tboot_shared->tboot_size);
+    printk(TBOOT_DETA"\t num_in_wfs: %u\n", tboot_shared->num_in_wfs);
+    printk(TBOOT_DETA"\t flags: 0x%8.8x\n", tboot_shared->flags);
+    printk(TBOOT_DETA"\t ap_wake_addr: 0x%08x\n", (uint32_t)tboot_shared->ap_wake_addr);
+    printk(TBOOT_DETA"\t ap_wake_trigger: %u\n", tboot_shared->ap_wake_trigger);
+}
+
 static void post_launch(void)
 {
     uint64_t base, size;

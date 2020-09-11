@@ -1,7 +1,8 @@
 /*
- * printk.h: printk to serial for very early boot stages
+ * memlog.h: log messages to memory
  *
- * Copyright (c) 2006-2010, Intel Corporation
+ * Copyright (c) 2006-2020, Intel Corporation
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,38 +33,13 @@
  *
  */
 
-#ifndef __PRINTK_H__
-#define __PRINTK_H__
+#ifndef __MEMLOG_H__
+#define __MEMLOG_H__
 
-#include <com.h>
-#include <vga.h>
+#include <types.h>
 
-#define TBOOT_LOG_LEVEL_NONE    0x00
-#define TBOOT_LOG_LEVEL_ERR     0x01
-#define TBOOT_LOG_LEVEL_WARN    0x02
-#define TBOOT_LOG_LEVEL_INFO    0x04
-#define TBOOT_LOG_LEVEL_DETA    0x08
-#define TBOOT_LOG_LEVEL_ALL     0xFF
-
-#define TBOOT_LOG_TARGET_NONE   0x00
-#define TBOOT_LOG_TARGET_VGA    0x01
-#define TBOOT_LOG_TARGET_SERIAL 0x02
-#define TBOOT_LOG_TARGET_MEMORY 0x04
-
-extern uint8_t g_log_level;
-extern uint8_t g_log_targets;
-extern uint8_t g_vga_delay;
-extern serial_port_t g_com_port;
-
-#define serial_init()         comc_init()
-#define serial_write(s, n)    comc_puts(s, n)
-
-#define vga_write(s,n)        vga_puts(s, n)
-
-extern void printk_init(bool force_vga_off);
-extern void printk_disable_vga(void);
-extern void printk_flush(void);
-extern void printk(const char *fmt, ...)
-                         __attribute__ ((format (printf, 1, 2)));
+void memlog_init(void);
+void memlog_write(const char *str, unsigned int count);
+void memlog_compress(uint32_t required_space);
 
 #endif

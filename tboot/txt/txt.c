@@ -872,6 +872,12 @@ tb_error_t txt_launch_environment(loader_ctx *lctx)
         printk_disable_vga();
     }
 
+    /*
+    * If memlog decide to compress logs after setting MTRRs,
+    * it will take very much time. Better do it now.
+    */
+    printk_flush();
+
     /* set MTRRs properly for AC module (SINIT) */
     if ( !set_mtrrs_for_acmod(g_sinit) )
         return TB_ERR_FATAL;
@@ -919,6 +925,12 @@ bool txt_s3_launch_environment(void)
         init_evtlog_desc(g_elog_2);
     }
 
+    /*
+    * If memlog decide to compress logs after setting MTRRs,
+    * it will take very much time. Better do it now.
+    */
+    printk_flush();
+
     /* set MTRRs properly for AC module (SINIT) */
     set_mtrrs_for_acmod(g_sinit);
 
@@ -952,6 +964,12 @@ tb_error_t txt_launch_racm(loader_ctx *lctx)
     /* save MTRRs before we alter them for RACM launch */
     /*  - not needed by far since always reboot after RACM launch */
     //save_mtrrs(...);
+
+    /*
+    * If memlog decide to compress logs after setting MTRRs,
+    * it will take very much time. Better do it now.
+    */
+    printk_flush();
 
     /* set MTRRs properly for AC module (RACM) */
     if ( !set_mtrrs_for_acmod(racm) )
