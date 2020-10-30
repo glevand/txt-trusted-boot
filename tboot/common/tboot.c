@@ -381,13 +381,13 @@ void begin_launch(void *addr, uint32_t magic)
 
     /* make copy of e820 map that we will use and adjust */
     if ( !s3_flag ) {
-        if ( !copy_e820_map(g_ldr_ctx) )  apply_policy(TB_ERR_FATAL);
         if (efi_memmap_copy(g_ldr_ctx)) {
             if (get_tboot_dump_memmap()) {
                 printk(TBOOT_INFO"Original EFI memory map:\n");
                 efi_memmap_dump();
             }
         }
+        if ( !copy_e820_map(g_ldr_ctx) )  apply_policy(TB_ERR_FATAL);
     }
 
     /* we need to make sure this is a (TXT-) capable platform before using */

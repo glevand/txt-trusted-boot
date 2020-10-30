@@ -108,23 +108,38 @@ static bool insert_after_region(memory_map_t *e820map, unsigned int *nr_map,
                                 unsigned int pos, uint64_t addr, uint64_t size,
                                 uint32_t type)
 {
-    /* no more room */
-    if ( *nr_map + 1 > MAX_E820_ENTRIES )
-        return false;
+    /* 
+     * If previous region has the same type and its end address equals our base,
+     * just extend its size
+     */
+    uint64_t prev_base = e820_base_64(&e820map[pos]);
+    uint64_t prev_length = e820_length_64(&e820map[pos]);
+    if (pos+1 > 0 && e820map[pos].type == type && 
+            prev_base + prev_length == addr) {
+        split64b(prev_length + size, &(e820map[pos].length_low),
+                &(e820map[pos].length_high));
+    } else {
 
-    /* shift (copy) everything up one entry */
-    for ( unsigned int i = *nr_map - 1; i > pos; i--)
-        e820map[i+1] = e820map[i];
+        /* no more room */
+        if ( *nr_map + 1 > MAX_E820_ENTRIES )
+            return false;
 
-    /* now add our entry */
-    split64b(addr, &(e820map[pos+1].base_addr_low),
-             &(e820map[pos+1].base_addr_high));
-    split64b(size, &(e820map[pos+1].length_low),
-             &(e820map[pos+1].length_high));
-    e820map[pos+1].type = type;
-    e820map[pos+1].size = sizeof(memory_map_t) - sizeof(uint32_t);
+        /* shift (copy) everything up one entry */
+        for ( unsigned int i = *nr_map - 1; i > pos; i--)
+            e820map[i+1] = e820map[i];
 
-    (*nr_map)++;
+        /* now add our entry */
+        split64b(addr, &(e820map[pos+1].base_addr_low),
+                &(e820map[pos+1].base_addr_high));
+        split64b(size, &(e820map[pos+1].length_low),
+                &(e820map[pos+1].length_high));
+
+        e820map[pos+1].type = type;
+        e820map[pos+1].size = sizeof(memory_map_t) - sizeof(uint32_t);
+
+        (*nr_map)++;
+
+    }
 
     return true;
 }
@@ -293,7 +308,62 @@ bool copy_e820_map(loader_ctx *lctx)
 
     g_nr_map = 0;
 
-    if (have_loader_memmap(lctx)){
+    if (lctx->type == MB2_EFI_ONLY) {
+        efi_mem_descr_t* desc = NULL;
+        while ((desc = efi_memmap_walk(desc)) != NULL) {
+            uint64_t start = desc->physical_start;
+            uint64_t len = desc->num_pages << (uint64_t)EFI_PAGE_SHIFT;
+            uint64_t type;
+            switch (desc->type) {
+                case EFI_RESERVED_TYPE:
+                case EFI_RUNTIME_SERVICES_CODE:
+                case EFI_RUNTIME_SERVICES_DATA:
+                case EFI_MEMORY_MAPPED_IO:
+                case EFI_MEMORY_MAPPED_IO_PORT_SPACE:
+                case EFI_PAL_CODE:
+                    type = E820_RESERVED;
+                    break;
+                
+                case EFI_UNUSABLE_MEMORY:
+                    type = E820_UNUSABLE;
+                    break;
+
+                case EFI_BOOT_SERVICES_CODE:
+                case EFI_BOOT_SERVICES_DATA:
+                case EFI_LOADER_CODE:
+                case EFI_LOADER_DATA:
+                case EFI_CONVENTIONAL_MEMORY:
+                    type = E820_RAM;
+                    break;
+
+                case EFI_ACPI_RECLAIM_MEMORY:
+                    type = E820_ACPI;
+                    break;
+
+                case EFI_ACPI_MEMORY_NVS:
+                    type = E820_NVS;
+                    break;
+
+                default:
+                    printk(TBOOT_ERR"unknown memory type in EFI MMAP: %d\n",
+                        desc->type);
+                    type = E820_RESERVED;
+            }
+
+            memory_map_t entry;
+            entry.base_addr_low = start & 0xffffffff;
+            entry.base_addr_high = (start >> 32ULL) & 0xffffffff;
+            entry.length_low = len & 0xffffffff;
+            entry.length_high = (len >> 32ULL) & 0xffffffff;
+            entry.type = type;
+
+            if (!protect_region(g_copy_e820_map, &g_nr_map,
+                                e820_base_64(&entry), e820_length_64(&entry),
+                                entry.type)) {
+                return false;
+            }
+        }
+    } else if (have_loader_memmap(lctx)){
         uint32_t memmap_length = get_loader_memmap_length(lctx);
         memory_map_t *memmap = get_loader_memmap(lctx);
         printk(TBOOT_DETA"original e820 map:\n");

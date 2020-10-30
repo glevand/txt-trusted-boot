@@ -64,8 +64,10 @@
 #define MBI_VBE          (1<<11)
 
 /* multiboot 2 constants */
-#define MB2_HEADER_MAGIC		0xe85250d6
-#define MB2_LOADER_MAGIC		0x36d76289
+#define MB2_HEADER_MAGIC      0xe85250d6
+#define MB2_LOADER_MAGIC      0x36d76289
+#define MB2_EFI_LOADER_MAGIC  0x11c4d28a // not defined in MB2 spec, this is
+                                         // only for internal purposes
 #define MB2_HEADER_SEARCH_LIMIT 32768
 
 #define MB2_ARCH_X86  0
@@ -77,6 +79,9 @@
 #define MB2_HDR_TAG_CONSOLE_FLAGS	  4
 #define MB2_HDR_TAG_FRAMEBUFFER		  5
 #define MB2_HDR_TAG_MOD_ALIGN		  6
+#define MB2_HDR_TAG_BOOT_SERVICES  7
+#define MB2_HDR_TAG_EFI32_ENTRY    8
+#define MB2_HDR_TAG_EFI64_ENTRY    9
 
 #define MB2_HDR_TAG_REQUIRED      0
 #define MB2_HDR_TAG_OPTIONAL		  1
@@ -104,6 +109,8 @@
 #define MB2_TAG_TYPE_NETWORK          16
 #define MB2_TAG_TYPE_EFI_MMAP         17
 #define MB2_TAG_TYPE_EFI_BS           18
+#define MB2_TAG_TYPE_EFI32_IH         19
+#define MB2_TAG_TYPE_EFI64_IH         20
 
 #ifndef __ASSEMBLY__
 

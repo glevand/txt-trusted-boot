@@ -77,16 +77,6 @@ extern bool is_sinit_acmod(const void *acmod_base, uint32_t acmod_size,
 extern void apply_policy(tb_error_t error);
 extern uint32_t g_mb_orig_size;
 
-#define LOADER_CTX_BAD(xctx) \
-    xctx == NULL ? true : \
-        xctx->addr == NULL ? true : \
-        xctx->type != 1 && xctx->type != 2 ? true : false
-
-#define MB_NONE 0
-#define MB1_ONLY 1
-#define MB2_ONLY 2
-#define MB_BOTH 3
-
 static void
 printk_long(char *what)
 {
@@ -409,7 +399,7 @@ static void *remove_module(loader_ctx *lctx, const module_t *m_orig)
 
         return mod_start;
     }
-    if (lctx->type == MB2_ONLY){
+    if (lctx->type == MB2_ONLY || lctx->type == MB2_EFI_ONLY) {
         /* multiboot 2 */
         /* if we're removing the first module (i.e. the "kernel") then */
         /* need to adjust some mbi fields as well */
@@ -1114,7 +1104,7 @@ find_platform_sinit_module(loader_ctx *lctx, void **base, uint32_t *size)
 
 void print_loader_ctx(loader_ctx *lctx)
 {
-    if (lctx->type != MB2_ONLY){
+    if (lctx->type == MB1_ONLY) {
         printk(TBOOT_ERR"this routine only prints out multiboot 2\n");
         return;
     } else {
@@ -1160,7 +1150,7 @@ uint8_t
 
     if (LOADER_CTX_BAD(lctx))
         return NULL;
-    if (lctx->type != MB2_ONLY)
+    if (lctx->type == MB1_ONLY)
         return NULL;
     if (length == NULL)
         return NULL;
@@ -1187,7 +1177,7 @@ get_loader_efi_ptr(loader_ctx *lctx, uint32_t *address, uint64_t *long_address)
     struct mb2_tag_efi64 *efi64;
     if (LOADER_CTX_BAD(lctx))
         return false;
-    if (lctx->type != MB2_ONLY)
+    if (lctx->type == MB1_ONLY)
         return false;
     start = (struct mb2_tag *)(lctx->addr + 8);
     hit = find_mb2_tag_type(start, MB2_TAG_TYPE_EFI32);
@@ -1306,7 +1296,13 @@ void determine_loader_type(void *addr, uint32_t magic)
             }
             break;
         case MB2_LOADER_MAGIC:
-            g_ldr_ctx->type = MB2_ONLY;
+        case MB2_EFI_LOADER_MAGIC:
+
+            if (magic == MB2_LOADER_MAGIC) {
+                g_ldr_ctx->type = MB2_ONLY;
+            } else {
+                g_ldr_ctx->type = MB2_EFI_ONLY;
+            }
             /* save the original MB2 info size, since we have
              * to put updates inline
              */

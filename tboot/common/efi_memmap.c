@@ -57,6 +57,13 @@ static bool region_is_free(uint32_t region_type);
 bool efi_memmap_copy(loader_ctx *lctx)
 {
     uint32_t descr_addr, descr_ver, descr_size, mmap_size;
+
+    if (lctx->type == MB2_EFI_ONLY) {
+        /* EFI memory map should be already copied by efi_stub */
+        efi_mmap_available = true;
+        return true;
+    }
+
     descr_addr = find_efi_memmap(lctx, &descr_size,
                                  &descr_ver, &mmap_size);
 

@@ -267,6 +267,12 @@ multiboot2_header:
                    __bss_start,       /* load_end_addr */ \
                    _end               /* bss_end_addr */
 
+        /* EFI boot services tag */
+        mb2ht_init MB2_HDR_TAG_BOOT_SERVICES, MB2_HDR_TAG_REQUIRED
+
+        /* EFI64 entry point */
+        mb2ht_init MB2_HDR_TAG_EFI64_ENTRY, MB2_HDR_TAG_REQUIRED, efi_start_mb2
+
         /* Multiboot2 header end tag. */
         mb2ht_init MB2_HDR_TAG_END, MB2_HDR_TAG_REQUIRED
 multiboot2_header_end:	
@@ -502,6 +508,7 @@ int_handler:
 	.align 8
 
 /* GDT */
+.globl gdt_descr
 gdt_descr:
 	.word	gdt_table_end - gdt_table - 1
 	.long	gdt_table

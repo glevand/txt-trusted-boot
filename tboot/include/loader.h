@@ -36,6 +36,18 @@
 #ifndef __LOADER_H__
 #define __LOADER_H__
 
+#define LOADER_CTX_BAD(xctx) \
+    xctx == NULL ? true : \
+        xctx->addr == NULL ? true : \
+        xctx->type == 0 ? true : false
+
+#define MB_NONE 0
+#define MB1_ONLY 1
+#define MB2_ONLY 2
+#define MB_BOTH 3
+#define MB2_EFI_ONLY 4 // TBOOT loaded with EFI services available, e820 is not
+                       // present in mbi
+
 typedef struct {
     void *addr;
     uint32_t type;
