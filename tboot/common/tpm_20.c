@@ -2379,9 +2379,31 @@ static bool tpm20_get_nvindex_size(struct tpm_if *ti, uint32_t locality,
 static bool tpm20_get_nvindex_permission(struct tpm_if *ti, uint32_t locality,
                                     uint32_t index, uint32_t *attribute)
 {
+    tpm_nv_read_public_in public_in;
+    tpm_nv_read_public_out public_out;
+    u32 ret;
+
     if ( ti == NULL || locality >= TPM_NR_LOCALITIES
          || index == 0 || attribute == NULL )
         return false;
+
+    public_in.index = index;
+
+    ret = _tpm20_nv_read_public(locality, &public_in, &public_out);
+    if ( ret != TPM_RC_SUCCESS ) {
+        printk(TBOOT_WARN"TPM: fail to get public data of 0x%08X in TPM NV\n", index);
+        ti->error = ret;
+        return false;
+    }
+
+    if (index != public_out.nv_public.t.nv_public.index) {
+        printk(TBOOT_WARN"TPM: Index 0x%08X is not the one expected 0x%08X\n",
+                index, index);
+        ti->error = TPM_RC_FAILURE;
+        return false;
+    }
+
+    *attribute = *(uint32_t*)(&public_out.nv_public.t.nv_public.attr);
 
     return true;
 }

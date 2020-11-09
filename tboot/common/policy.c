@@ -286,6 +286,24 @@ static bool read_policy_from_tpm(uint32_t index, void* policy_index, size_t *pol
     return true;
 }
 
+bool check_index_attribute(uint32_t index)
+{
+    uint32_t attribute;
+    struct tpm_if *tpm = get_tpm();
+    const struct tpm_if_fp *tpm_fp = get_tpm_fp();
+
+    if ( !tpm_fp->get_nvindex_permission(tpm, 0, index, &attribute) ) {
+        printk(TBOOT_ERR"\treading nv index permission failed\n");
+        return false;
+    }
+    if (attribute & TPM_NV_PER_PPWRITE) {
+        printk(TBOOT_ERR"\tnv index should not be TPMA_NV_PPWRITE\n");
+        return false;
+    }
+
+    return true;
+}
+
 /*
  * unwrap_lcp_policy
  *
@@ -403,8 +421,9 @@ tb_error_t set_policy(void)
     /* try to read tboot policy from TB_POLICY_INDEX in TPM NV */
     size_t policy_index_size = sizeof(_policy_index_buf);
     printk(TBOOT_INFO"reading Verified Launch Policy from TPM NV...\n");
-    if ( read_policy_from_tpm(tpm->tb_policy_index,
-             _policy_index_buf, &policy_index_size) ) {
+    if (read_policy_from_tpm(tpm->tb_policy_index, _policy_index_buf,
+                             &policy_index_size) &&
+            check_index_attribute(tpm->tb_policy_index)) {
         printk(TBOOT_DETA"\t:%lu bytes read\n", policy_index_size);
         if ( verify_policy((tb_policy_t *)_policy_index_buf,
                  policy_index_size, true) ) {
@@ -419,8 +438,9 @@ tb_error_t set_policy(void)
      * type is LCP_POLTYPE_LIST (since we could have been give a policy data
      * file even though the policy was not a LIST */
     printk(TBOOT_INFO"reading Launch Control Policy from TPM NV...\n");
-    if ( read_policy_from_tpm(tpm->lcp_own_index,
-             _policy_index_buf, &policy_index_size) ) {
+    if (read_policy_from_tpm(tpm->lcp_own_index, _policy_index_buf,
+                             &policy_index_size) &&
+            check_index_attribute(tpm->lcp_own_index)) {
         printk(TBOOT_DETA"\t:%lu bytes read\n", policy_index_size);
         /* assume lcp policy has been verified by sinit already */
         lcp_policy_t *pol = (lcp_policy_t *)_policy_index_buf;
