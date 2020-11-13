@@ -10,6 +10,8 @@
         Disable GCC9 address-of-packed-member warning
         Fix warnings after "Avoid unsafe functions" scan
         Use SHA256 as default hashing algorithm
+        Known issues:
+          - TBOOT hangs when booted with multiboot(1), use only multiboot2 as a workaround
 20191125: v1.9.11
         tb_polgen: Add support for SHA256
         Configure IOMMU before executing GETSEC[SENTER]

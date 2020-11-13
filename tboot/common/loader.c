@@ -2049,7 +2049,7 @@ bool load_framebuffer_info(loader_ctx *lctx, void *vscr, bool efifb)
 
     if (scr == NULL)
         return false;
-    if (LOADER_CTX_BAD(lctx))
+    if (LOADER_CTX_BAD(lctx) || lctx->type != MB2_ONLY)
         return false;
     start = (struct mb2_tag *)(lctx->addr + 8);
     start = find_mb2_tag_type(start, MB2_TAG_TYPE_FRAMEBUFFER);
@@ -2093,7 +2093,7 @@ bool load_framebuffer_info(loader_ctx *lctx, void *vscr, bool efifb)
 
 struct mb2_fb* get_framebuffer_info(loader_ctx *lctx)
 {
-    if (LOADER_CTX_BAD(lctx)) {
+    if (LOADER_CTX_BAD(lctx) || lctx->type != MB2_ONLY) {
         return NULL;
     }
 
