@@ -46,24 +46,6 @@ fi
 # Base name of LCP policy data file for list policy
 : ${GRUB_TBOOT_POLICY_DATA=''}
 
-# VGA logging is not supported in UEFI environment
-if [ -d /sys/firmware/efi ]; then
-  _cmdline=
-  for _arg in ${GRUB_CMDLINE_TBOOT}; do
-    case ${_arg} in
-      logging=*vga*)
-	echo "UEFI environment: deactivating VGA logging for tboot" >&2
-	_arg=`echo "${_arg}" | sed -e 's/=vga,/=/' -e s'/,\{0,1\}vga//' -e s'/=$/=none/'`;;
-    esac
-    if [ -z "${_cmdline}" ]; then
-      _cmdline=${_arg}
-    else
-      _cmdline="${_cmdline} ${_arg}"
-    fi
-  done
-  GRUB_CMDLINE_TBOOT=${_cmdline}
-fi
-
 export TEXTDOMAIN=grub
 export TEXTDOMAINDIR=${prefix}/share/locale
 
