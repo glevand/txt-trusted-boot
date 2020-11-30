@@ -480,8 +480,8 @@ bool evtlog_append_tpm2_tcg(uint8_t pcr, uint32_t type, hash_list_t *hl)
         return false;
     }
 
-    event = (tcg_pcr_event2*)(void *)(unsigned long)g_elog_2_1->phys_addr +
-        g_elog_2_1->next_record_offset;
+    event = (tcg_pcr_event2*)(void *)(unsigned long)(g_elog_2_1->phys_addr +
+        g_elog_2_1->next_record_offset);
     event->pcr_index = pcr;
     event->event_type = type;
     event->event_size = 0;  // No event data passed by tboot.
